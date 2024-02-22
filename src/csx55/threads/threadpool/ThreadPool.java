@@ -6,9 +6,10 @@ import java.util.concurrent.BlockingQueue;
 
 public class ThreadPool {
 
-    private BlockingQueue taskQueue = null;
+    private BlockingQueue<Runnable> taskQueue = null;
 
-    private List<> runnableTasks = new ArrayList<>();
+    // this will be the thread pool
+    private ArrayList<TaskThreadRunnable> runnableTasks = new ArrayList<>();
 
     // default constructor
     public ThreadPool(int numberOfThreads, int maxTasks) {
@@ -22,9 +23,39 @@ public class ThreadPool {
         /*
          * now create an array of running threads of thread pool size
          */
+        for (int i = 0; i < numberOfThreads; i++) {
+            TaskThreadRunnable tasks = new TaskThreadRunnable(taskQueue);
+            // adding threads to the thread pool
+            runnableTasks.add(tasks);
+        }
 
         /*
          * finally, start all the threads of the thread pool
          */
+        for (TaskThreadRunnable taskThread : runnableTasks) {
+            new Thread(taskThread).start();
+        }
+
+    }
+
+    /*
+     * Execute function will take a task and offer it to the task queue
+     * This will be picked up by a task thread object
+     * This will be synchronized because we want the task queue to be offered by
+     * only one thread at a time
+     */
+
+    public void executeTask(Runnable task) {
+        this.taskQueue.offer(task);
+    }
+
+    public synchronized void waitUntilAllTasksFinished() {
+        while (this.taskQueue.size() > 0) {
+            try {
+                Thread.sleep(1);
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
     }
 }
