@@ -40,4 +40,12 @@ public class TCPConnection {
         this.receiver.din.close();
     }
 
+    public TCPSender getSenderThread() {
+        return this.sender;
+    }
+
+    public Socket getSocket() {
+        return this.socket;
+    }
+
 }

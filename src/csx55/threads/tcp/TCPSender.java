@@ -41,4 +41,9 @@ public class TCPSender implements Runnable {
         }
     }
 
+    /* put data into the queue to send data */
+    public void sendData(byte[] data) throws InterruptedException {
+        this.queue.put(data);
+    }
+
 }

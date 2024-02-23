@@ -1,13 +1,20 @@
 package csx55.threads.node;
 
+import java.io.IOException;
 import java.net.ServerSocket;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Scanner;
 
 import csx55.threads.tcp.TCPConnection;
 import csx55.threads.tcp.TCPServer;
 import csx55.threads.wireformats.Message;
+import csx55.threads.wireformats.Protocol;
+import csx55.threads.wireformats.Register;
 
 public class Registry implements Node {
+
+    private Map<String, TCPConnection> registryConnections = new HashMap<>();
 
     public static void main(String[] args) {
         /* take port for registry from command line and start a server socket */
@@ -31,10 +38,6 @@ public class Registry implements Node {
 
     }
 
-    public void handleIncomingMessage(Message message, TCPConnection connection) {
-
-    }
-
     public void takeCommands() {
         System.out.println("This is the Registry command console. Please enter a valid command to start the overlay.");
 
@@ -53,5 +56,79 @@ public class Registry implements Node {
                 }
             }
         }
+    }
+
+    public void handleIncomingMessage(Message message, TCPConnection connection) {
+        switch (message.getType()) {
+            case Protocol.REGISTER_REQUEST:
+                handleRegisterRequest((Register) message, connection, true);
+                break;
+
+            default:
+                break;
+        }
+
+    }
+
+    /*
+     * registration should be synchronized since only one registration request
+     * should be handled at one time i.e. one thread at a time
+     */
+    public synchronized void handleRegisterRequest(Register registerMessage, TCPConnection connection,
+            boolean register) {
+        String nodes = registerMessage.getNodeConnectionReadable();
+        String ipAddress = connection.getSocket().getInetAddress().getHostName().split("\\.")[0];
+
+        String message = checkRegistrationStatus(nodes, ipAddress, register);
+        byte status;
+        if (message.length() == 0) {
+            if (register) {
+                registryConnections.put(nodes, connection);
+            } else {
+                registryConnections.remove(nodes);
+                System.out.println("Deregistered " + nodes + ". There are now ("
+                        + registryConnections.size() + ") connections.\n");
+            }
+            message = "Registration request successful.  The number of messaging nodes currently "
+                    + "constituting the overlay is (" + registryConnections.size() + ").\n";
+            status = Protocol.SUCCESS;
+        } else {
+            System.out.println("Unable to process request. Responding with a failure.");
+            status = Protocol.FAILURE;
+        }
+        /*
+         * RegisterResponse response = new RegisterResponse(status, message);
+         * try {
+         * connection.getTCPSenderThread().sendData(response.getBytes());
+         * } catch (IOException | InterruptedException e) {
+         * System.out.println(e.getMessage());
+         * connections.remove(nodes);
+         * e.printStackTrace();
+         * }
+         */
+    }
+
+    private String checkRegistrationStatus(String nodeDetails, String connectionIP,
+            final boolean register) {
+
+        String message = "";
+        if (registryConnections.containsKey(nodeDetails) && register) {
+            message = "The node, " + nodeDetails + " had previously registered and has "
+                    + "a valid entry in its registry. ";
+        } else if (!registryConnections.containsKey(nodeDetails) && !register) {
+            /*
+             * The case that the item is not in the registry.
+             */
+            message = "The node, " + nodeDetails + " had not previously been registered. ";
+        }
+        if (!nodeDetails.split(":")[0].equals(connectionIP)
+                && !connectionIP.equals("localhost")) {
+            message += "There is a mismatch in the address that is specified in request and "
+                    + "the IP of the socket.";
+        }
+
+        System.out.println("Connected Node: " + nodeDetails);
+
+        return message;
     }
 }

@@ -1,5 +1,9 @@
 package csx55.threads.wireformats;
 
-public class Message {
+import java.io.IOException;
 
+public interface Message {
+    public int getType();
+
+    public byte[] getBytes() throws IOException;
 }
