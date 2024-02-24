@@ -16,6 +16,10 @@ public class Registry implements Node {
 
     private Map<String, TCPConnection> registryConnections = new HashMap<>();
 
+    private int threadPoolSize;
+
+    private final String SETUP_OVERLAY = "setup-overlay";
+
     public static void main(String[] args) {
         /* take port for registry from command line and start a server socket */
 
@@ -48,6 +52,9 @@ public class Registry implements Node {
                 String[] input = line.split("\\s+");
                 String command = input[0];
                 switch (command) {
+                    case (SETUP_OVERLAY):
+                        setupOverlay(input);
+                        break;
                     default:
                         System.out.println("Please enter a valid command! Options are:\n" +
                                 " - setup-overlay thread-pool-size\n" +
@@ -130,5 +137,31 @@ public class Registry implements Node {
         System.out.println("Connected Node: " + nodeDetails);
 
         return message;
+    }
+
+    private void setupOverlay(String[] input) {
+        /* start thread pool of size given in input */
+        try {
+            this.threadPoolSize = Integer.parseInt(input[1]);
+        } catch (ArrayIndexOutOfBoundsException | NumberFormatException e) {
+            System.out.println("Invalid input: Enter valid integer for size of the thread pool.");
+            e.printStackTrace();
+        }
+        /* TODO: need a check to see if overlay already exists */
+
+        /* create overlay with the edges count and the existing connections */
+        int connectingEdges = 4;
+        try {
+            (new Overlay()).setupOverlay(registryConnections, connectingEdges);
+        } catch (Exception e) {
+            // Handle exceptions during overlay setup
+            System.out.println("Overlay setup failed: " + e.getMessage());
+            e.printStackTrace();
+            return;
+        }
+        // Notify about successful overlay configuration
+        System.out.println(
+                "Network overlay successfully configured and sent to (" + registryConnections.size()
+                        + ") connections.");
     }
 }
