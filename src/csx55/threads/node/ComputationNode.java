@@ -94,15 +94,17 @@ public class ComputationNode implements Node {
              * node
              */
 
-            this.registryConnection = new TCPConnection(this, socketToRegistry);
+            TCPConnection connection = new TCPConnection(this, socketToRegistry);
             System.out.println("A Computation Node is live at:" + this.host + ":" + this.port);
 
             /* send marshallized Register message to the registry */
             Register register = new Register(Protocol.REGISTER_REQUEST, this.host, this.port);
-            this.registryConnection.getSenderThread().sendData(register.getBytes());
+            connection.getSenderThread().sendData(register.getBytes());
             // TODO: check if this start is redundant, since this connection is supposed to
             // start at TCP server
-            this.registryConnection.start();
+            connection.start();
+
+            this.registryConnection = connection;
 
         } catch (IOException | InterruptedException e) {
             System.out.println("Error registering node: " + e.getMessage());
