@@ -6,8 +6,8 @@ BASE_DIR="$( cd "$( dirname "$0" )" && pwd )"
 # Set the directory for compiled classes
 BUILD_DIR="$BASE_DIR/build/classes/java/main"
 
-HOST=pierre
-PORT=5001
+HOST=atlanta
+PORT=5000
 
 
 gradle clean
@@ -22,7 +22,7 @@ COMMAND="cd $BUILD_DIR; java -cp . csx55.threads.node.ComputationNode $HOST $POR
 for ((j=0; j<${1:-1}; j++))
 do
     RUN='gnome-terminal'
-    for i in `cat machine_list`
+    for i in `cat machines_list`
     do
         echo 'logging into '$i
         SSH='--tab -e "ssh -t '$i' '$COMMAND'"'

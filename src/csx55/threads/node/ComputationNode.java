@@ -61,7 +61,7 @@ public class ComputationNode implements Node {
             // register the node
             computationNode.registerNode(args[0], Integer.valueOf(args[1]));
 
-        } catch (Exception e) {
+        } catch (IOException e) {
             System.out.println("An error occurred in the computation node: " + e.getMessage());
             e.printStackTrace();
         }
@@ -104,8 +104,9 @@ public class ComputationNode implements Node {
             // start at TCP server
             this.registryConnection.start();
 
-        } catch (Exception e) {
-            // TODO: handle exception
+        } catch (IOException | InterruptedException e) {
+            System.out.println("Error registering node: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
