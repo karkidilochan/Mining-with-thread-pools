@@ -7,5 +7,5 @@ sourceSets {
 		java {
 			srcDirs 'src'
 		}
-	}
+	}	
 }
