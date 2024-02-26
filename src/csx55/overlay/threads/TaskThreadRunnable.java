@@ -36,6 +36,8 @@ public class TaskThreadRunnable implements Runnable {
              * and run
              */
             try {
+
+
                 /* in final version, this will take the mine instance */
                 Task task = taskQueue.take();
                 System.out.println("Retrieved a task. Starting..");
@@ -46,11 +48,19 @@ public class TaskThreadRunnable implements Runnable {
                 /* increase count for completed tasks */
                 clientNode.getNodeStatistics().addCompleted();
 
+                System.out.println("Completed a task.");
+
+
+                if (taskQueue.size() == 0) {
+                    System.out.println("Completed count:" + clientNode.getNodeStatistics().getCompleted());
+                    System.out.println("Generated count:" + clientNode.getNodeStatistics().getGenerated());
+                }
+
+
             } catch (Exception e) {
                 System.out.println("Error mining task:" + e.getMessage());
                 e.printStackTrace();
             }
-            System.out.println("Completed a task.");
         }
 
     }

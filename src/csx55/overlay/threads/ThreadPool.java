@@ -24,7 +24,7 @@ public class ThreadPool {
     public ThreadPool(int numberOfThreads, MessagingNode messagingNode) {
         this.threads = new Thread[numberOfThreads];
 
-        int maxTasks = 5;
+        int maxTasks = 1000;
 
         /*
          * initialized using ArrayBlockingQueue as it creates a bounded blocking queue
@@ -54,15 +54,6 @@ public class ThreadPool {
         // this.taskQueue.offer(task);
     }
 
-    public synchronized void waitUntilAllTasksFinished() {
-        while (this.taskQueue.size() > 0) {
-            try {
-                Thread.sleep(1);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-        }
-    }
 
     public ArrayList<TaskThreadRunnable> getTasksRunnable() {
         return runnableTasks;
