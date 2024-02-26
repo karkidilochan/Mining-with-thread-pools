@@ -8,7 +8,7 @@ import java.io.DataInputStream;
 import java.io.DataOutputStream;
 import java.io.IOException;
 
-import csx55.overlay.routing.MessagesStatistics;
+import csx55.overlay.routing.TaskStatistics;
 
 /**
  * Represents a message containing traffic statistics.
@@ -27,25 +27,26 @@ public class TrafficSummary implements Event {
 
     /**
      * Constructs a TrafficSummary object with the specified parameters.
-     * 
+     *
      * @param ipAddress          The IP address.
      * @param portNumber         The port number.
      * @param messagesStatistics The statistics of messages.
      */
-    public TrafficSummary(String ipAddress, int portNumber, MessagesStatistics messagesStats) {
-        this.type = Protocol.TRAFFIC_SUMMARY;
-        this.ipAddress = ipAddress;
-        this.portNumber = portNumber;
-        this.sentMessagesCount = messagesStats.getSentMessagesCount();
-        this.sentMessagesSummation = messagesStats.getSentMessagesSummation();
-        this.receivedMessagesCount = messagesStats.getReceivedMessagesCount();
-        this.receivedMessagesSummation = messagesStats.getReceivedSummationCount();
-        this.relayedMessagesCount = messagesStats.getRelayedMessagesCount();
-    }
+    // public TrafficSummary(String ipAddress, int portNumber, TaskStatistics
+    // messagesStats) {
+    // this.type = Protocol.TRAFFIC_SUMMARY;
+    // this.ipAddress = ipAddress;
+    // this.portNumber = portNumber;
+    // this.sentMessagesCount = messagesStats.getSentMessagesCount();
+    // this.sentMessagesSummation = messagesStats.getSentMessagesSummation();
+    // this.receivedMessagesCount = messagesStats.getReceivedMessagesCount();
+    // this.receivedMessagesSummation = messagesStats.getReceivedSummationCount();
+    // this.relayedMessagesCount = messagesStats.getRelayedMessagesCount();
+    // }
 
     /**
      * Constructs a TrafficSummary object by unmarshalling the byte array.
-     * 
+     *
      * @param marshalledData The marshalled byte array containing the data.
      */
     public TrafficSummary(byte[] marshalledData) throws IOException {
@@ -95,7 +96,7 @@ public class TrafficSummary implements Event {
 
     /**
      * Marshals the TrafficSummary object into a byte array.
-     * 
+     *
      * @return The marshalled byte array.
      * @throws IOException If an I/O error occurs.
      */
@@ -127,14 +128,17 @@ public class TrafficSummary implements Event {
 
     /**
      * Returns a string representation of the TrafficSummary object.
-     * 
+     *
      * @return A string representing the traffic summary.
      */
     public String toString() {
         return String.format("%1$20s %2$12s %3$10s %4$15s %5$15s %6$10s",
-                ipAddress + ":" + Integer.toString(portNumber), Integer.toString(sentMessagesCount),
-                Integer.toString(receivedMessagesCount), Long.toString(sentMessagesSummation),
-                Long.toString(receivedMessagesSummation), Integer.toString(relayedMessagesCount));
+                ipAddress + ":" + Integer.toString(portNumber),
+                Integer.toString(sentMessagesCount),
+                Integer.toString(receivedMessagesCount),
+                Long.toString(sentMessagesSummation),
+                Long.toString(receivedMessagesSummation),
+                Integer.toString(relayedMessagesCount));
     }
 
 }

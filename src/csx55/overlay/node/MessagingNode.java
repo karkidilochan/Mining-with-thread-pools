@@ -11,7 +11,7 @@ import java.util.Random;
 import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
 
-import csx55.overlay.routing.MessagesStatistics;
+import csx55.overlay.routing.TaskStatistics;
 import csx55.overlay.task.Miner;
 import csx55.overlay.task.Task;
 import csx55.overlay.tcp.TCPConnection;
@@ -22,6 +22,8 @@ import csx55.overlay.wireformats.MessagingNodesList;
 import csx55.overlay.wireformats.Protocol;
 import csx55.overlay.wireformats.Register;
 import csx55.overlay.wireformats.RegisterResponse;
+import csx55.overlay.wireformats.TaskInitiate;
+import csx55.overlay.wireformats.TrafficSummary;
 
 /**
  * Implementation of the Node interface, represents a messaging node in the
@@ -52,6 +54,8 @@ public class MessagingNode implements Node, Protocol {
      * Registry
      */
     private Map<String, TCPConnection> connections = new ConcurrentHashMap<>();
+
+    private TaskStatistics messageStatistics = new TaskStatistics();
 
     /**
      * Constructs a new messaging node with the specified host and port.
@@ -190,6 +194,11 @@ public class MessagingNode implements Node, Protocol {
             case Protocol.MESSAGING_NODES_LIST:
                 createOverlayConnections((MessagingNodesList) event);
                 break;
+
+            case Protocol.TASK_INITIATE:
+                handleTaskInitiation((TaskInitiate) event);
+                break;
+
         }
     }
 
@@ -227,7 +236,8 @@ public class MessagingNode implements Node, Protocol {
                 connections.put(peer, connection);
 
                 /* then, create the thread pool of given size */
-                createThreadPool(threadPoolSize);
+                this.threadPool = new ThreadPool(threadPoolSize, this);
+
             } catch (NumberFormatException | IOException | InterruptedException e) {
                 System.out.println(e.getMessage());
                 e.printStackTrace();
@@ -253,36 +263,58 @@ public class MessagingNode implements Node, Protocol {
         connections.put(nodeDetails, connection);
     }
 
-    private void createThreadPool(int threadPoolSize) throws IOException {
-        this.threadPool = new ThreadPool(threadPoolSize);
+    private void handleTaskInitiation(TaskInitiate taskInitiate) {
+        int rounds = taskInitiate.getNumberOfRounds();
 
-        for (int i = 0; i < 5; i++) {
-            Task task = new Task(InetAddress.getLocalHost().getHostAddress(), nodePort, i, new Random().nextInt());
-            threadPool.addTask(task);
-        }
-
-        // for (int i = 0; i < 5; i++) {
-        // int taskNo = i;
-        // // this anonymous function signifies the run method of the runnable task we
-        // are
-        // // creating
-        // threadPool.executeTask(() -> {
-        // String message = nodeHost + ":" + Thread.currentThread().getName() + ": Task"
-        // + taskNo;
-        // System.out.println(message);
-        // });
-        // }
-
-        /* TODO: create task and miner objects and execute them */
-
-        /*  */
+        Random random = new Random();
 
         /*
-         * TODO: create a separate start function that gets called on message received
-         * from registry
+         * at each round, node completes a random number of tasks between 1-1000
          */
-        this.threadPool.start();
+        try {
+            for (int round = 1; round < rounds + 1; round++) {
+                // TODO:
+                // int noOfTasks = random.nextInt(1000) + 1;
+                int noOfTasks = 5;
+                for (int i = 1; i < noOfTasks + 1; i++) {
+                    Task task = new Task(InetAddress.getLocalHost().getHostAddress(), nodePort, i,
+                            new Random().nextInt());
+                    threadPool.addTask(task);
 
+                    messageStatistics.addGenerated();
+                }
+
+            }
+            this.threadPool.start();
+        } catch (IOException e) {
+            System.out.println("Error occurred while adding tasks to queue: " + e.getMessage());
+            e.printStackTrace();
+        }
+
+    }
+
+    /**
+     * Sends a traffic summary including messaging messageStatistics in response to
+     * a request from the registry. Also resets all associated counters.
+     */
+
+    // private void sendTrafficSummary() {
+    // TrafficSummary trafficSummary = new TrafficSummary(nodeHost, nodePort,
+    // messageStatistics);
+
+    // try {
+    // registryConnection.getTCPSenderThread().sendData(trafficSummary.getBytes());
+    // } catch (IOException | InterruptedException e) {
+    // System.out.println("Error occurred while sending traffic summary response: "
+    // + e.getMessage());
+    // e.printStackTrace();
+    // }
+    // // Reset all messaging messageStatistics counters
+    // messageStatistics.reset();
+    // }
+
+    public TaskStatistics getNodeStatistics() {
+        return messageStatistics;
     }
 
 }

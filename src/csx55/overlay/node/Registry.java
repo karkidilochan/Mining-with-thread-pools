@@ -10,7 +10,7 @@ import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import csx55.overlay.routing.MessagesStatistics;
+import csx55.overlay.routing.TaskStatistics;
 import csx55.overlay.tcp.TCPConnection;
 import csx55.overlay.tcp.TCPServer;
 import csx55.overlay.wireformats.Event;
@@ -20,7 +20,7 @@ import csx55.overlay.wireformats.PullTrafficSummary;
 import csx55.overlay.wireformats.Register;
 import csx55.overlay.wireformats.RegisterResponse;
 import csx55.overlay.wireformats.TaskInitiate;
-import csx55.overlay.wireformats.TrafficSummary;;
+// import csx55.overlay.wireformats.TrafficSummary;;
 
 /**
  * The Registry class maintains information about messaging nodes and handles
@@ -33,8 +33,6 @@ public class Registry implements Node {
     // Constants representing different commands
     private static final String LIST_MESSAGING_NODES = "list-messaging-nodes";
     private static final String SETUP_OVERLAY = "setup-overlay";
-    private static final String SEND_OVERLAY_LINK_WEIGHTS = "send-overlay-link-weights";
-    private static final String LIST_WEIGHTS = "list-weights";
     private static final String START = "start";
 
     private int threadPoolSize;
@@ -45,7 +43,7 @@ public class Registry implements Node {
 
     private AtomicInteger completedTasks = new AtomicInteger(0);
 
-    private List<TrafficSummary> trafficSummary = new ArrayList<>();
+    // private List<TrafficSummary> trafficSummary = new ArrayList<>();
 
     /**
      * The main method of the Registry application.
@@ -100,14 +98,6 @@ public class Registry implements Node {
                         setupOverlay(input);
                         break;
 
-                    // case LIST_WEIGHTS:
-                    // listWeights();
-                    // break;
-
-                    // case SEND_OVERLAY_LINK_WEIGHTS:
-                    // sendOverlayLinkWeights();
-                    // break;
-
                     case START:
                         start(input[1]);
                         break;
@@ -115,10 +105,8 @@ public class Registry implements Node {
                     default:
                         System.out.println("Please enter a valid command! Options are:\n" +
                                 " - list-messaging-nodes\n" +
-                                " - list-weights\n" +
-                                " - setup-overlay k\n" +
-                                " - send-overlay-link-weights \n" +
-                                " - start R");
+                                " - setup-overlay thread-pool-size\n" +
+                                " - start number-of-rounds");
                         break;
                 }
             }
@@ -145,9 +133,9 @@ public class Registry implements Node {
                 handleTaskCompleteEvent();
                 break;
 
-            case Protocol.TRAFFIC_SUMMARY:
-                printTrafficSummary((TrafficSummary) event);
-                break;
+            // case Protocol.TRAFFIC_SUMMARY:
+            // printTrafficSummary((TrafficSummary) event);
+            // break;
         }
     }
 
@@ -267,26 +255,21 @@ public class Registry implements Node {
      *                  payload messages.
      */
     private void start(String maxRounds) {
-        if (connections.size() < 2) {
-            System.out.println("Insufficient connections (" + connections.size()
-                    + ") to start sending messages. Minimum 2 connections required.");
+
+        // Check if the overlay has been configured and link weights have been sent
+        if (threadPoolSize == 0) {
+            System.out.println("Unable to start sending messages: Overlay configuration missing.");
             return;
         }
 
-        // Check if the overlay has been configured and link weights have been sent
-        // if (linkWeights == null || !linkWeights.hasWeightsSent()) {
-        // System.out.println("Unable to start sending messages: Overlay configuration
-        // or link weights missing.");
-        // return;
-        // }
-
         // set default number of rounds
-        int rounds = 1;
+        int rounds;
         try {
             rounds = Integer.parseInt(maxRounds);
         } catch (ArrayIndexOutOfBoundsException | NumberFormatException e) {
-            System.out.println("Invalid input: Defaulting to " + rounds + " rounds.");
+            System.out.println("Invalid input: Provide a valid integer as number of rounds.");
             e.printStackTrace();
+            return;
         }
 
         // Create and send task initiation message to all connections
@@ -301,7 +284,7 @@ public class Registry implements Node {
 
             }
         });
-        System.out.println("\nWaiting for messages to be sent.");
+        System.out.println("\n Tasks will begin soon...");
     }
 
     /**
@@ -344,23 +327,12 @@ public class Registry implements Node {
      *
      * @param summary The traffic summary received from an overlay node.
      */
-    private synchronized void printTrafficSummary(TrafficSummary summary) {
-        trafficSummary.add(summary);
+    // private synchronized void printTrafficSummary(TrafficSummary summary) {
+    // trafficSummary.add(summary);
 
-        if (trafficSummary.size() == connections.size()) {
-            (new MessagesStatistics()).display(trafficSummary);
-            trafficSummary.clear();
-        }
-    }
-
-    // private void listWeights() {
-    // if (linkWeights == null || connections.size() < 2) {
-    // System.out.println(
-    // "The overlay has not yet been configured, or there are insufficient
-    // connections to calculate link weights.");
-
-    // } else {
-    // System.out.println(linkWeights.toString());
+    // if (trafficSummary.size() == connections.size()) {
+    // (new TaskStatistics()).display(trafficSummary);
+    // trafficSummary.clear();
     // }
     // }
 

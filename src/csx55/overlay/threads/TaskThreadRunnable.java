@@ -2,6 +2,7 @@ package csx55.overlay.threads;
 
 import java.util.concurrent.BlockingQueue;
 
+import csx55.overlay.node.MessagingNode;
 import csx55.overlay.task.Miner;
 import csx55.overlay.task.Task;
 
@@ -14,9 +15,12 @@ public class TaskThreadRunnable implements Runnable {
     // the task queue this thread belongs to
     private BlockingQueue<Task> taskQueue;
 
+    private MessagingNode clientNode;
+
     // default constructor will take the blocking queue it takes tasks from
-    public TaskThreadRunnable(BlockingQueue<Task> taskQueue) {
+    public TaskThreadRunnable(BlockingQueue<Task> taskQueue, MessagingNode clientNode) {
         this.taskQueue = taskQueue;
+        this.clientNode = clientNode;
     }
 
     public void run() {
@@ -39,7 +43,9 @@ public class TaskThreadRunnable implements Runnable {
                 Miner miner = new Miner();
                 miner.startMiner(task);
 
-                // runnableTask.run();
+                /* increase count for completed tasks */
+                clientNode.getNodeStatistics().addCompleted();
+
             } catch (Exception e) {
                 System.out.println("Error mining task:" + e.getMessage());
                 e.printStackTrace();

@@ -61,6 +61,6 @@ public class Miner {
     public void startMiner(Task task) {
         mine(task);
         int leadingZeros = this.leadingZeros(this.sha256.digest(task.toBytes()));
-        System.out.println("Task: " + task + " Leading zeros: " + leadingZeros);
+        System.out.println("Task: " + task.toString() + " Leading zeros: " + leadingZeros);
     }
 }
