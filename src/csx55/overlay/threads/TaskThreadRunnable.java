@@ -50,11 +50,11 @@ public class TaskThreadRunnable implements Runnable {
 
                 System.out.println("Completed a task.");
 
-
-                if (taskQueue.size() == 0) {
-                    System.out.println("Completed count:" + clientNode.getNodeStatistics().getCompleted());
-                    System.out.println("Generated count:" + clientNode.getNodeStatistics().getGenerated());
-                }
+//
+//                if (taskQueue.size() == 0) {
+//                    System.out.println("Completed count:" + clientNode.getNodeStatistics().getCompleted());
+//                    System.out.println("Generated count:" + clientNode.getNodeStatistics().getGenerated());
+//                }
 
 
             } catch (Exception e) {

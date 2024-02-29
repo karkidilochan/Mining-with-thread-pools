@@ -286,6 +286,9 @@ public class MessagingNode implements Node, Protocol {
 
             }
             this.threadPool.start();
+
+            waitForTasksToComplete();
+
         } catch (IOException e) {
             System.out.println("Error occurred while adding tasks to queue: " + e.getMessage());
             e.printStackTrace();
@@ -293,25 +296,37 @@ public class MessagingNode implements Node, Protocol {
 
     }
 
+    private void waitForTasksToComplete() {
+        while (true) {
+            long tasksTotal = messageStatistics.getGenerated() - messageStatistics.getPushed() + messageStatistics.getPulled();
+            if (tasksTotal == messageStatistics.getCompleted()) {
+                System.out.println("Completed count:" + messageStatistics.getCompleted());
+                System.out.println("Generated count:" + messageStatistics.getGenerated());
+
+                return;
+            }
+        }
+    }
+
     /**
      * Sends a traffic summary including messaging messageStatistics in response to
      * a request from the registry. Also resets all associated counters.
      */
 
-    // private void sendTrafficSummary() {
-    // TrafficSummary trafficSummary = new TrafficSummary(nodeHost, nodePort,
-    // messageStatistics);
-
-    // try {
-    // registryConnection.getTCPSenderThread().sendData(trafficSummary.getBytes());
-    // } catch (IOException | InterruptedException e) {
-    // System.out.println("Error occurred while sending traffic summary response: "
-    // + e.getMessage());
-    // e.printStackTrace();
-    // }
-    // // Reset all messaging messageStatistics counters
-    // messageStatistics.reset();
-    // }
+//     private void sendTrafficSummary() {
+//     TrafficSummary trafficSummary = new TrafficSummary(nodeHost, nodePort,
+//     messageStatistics);
+//
+//     try {
+//     registryConnection.getTCPSenderThread().sendData(trafficSummary.getBytes());
+//     } catch (IOException | InterruptedException e) {
+//     System.out.println("Error occurred while sending traffic summary response: "
+//     + e.getMessage());
+//     e.printStackTrace();
+//     }
+//     // Reset all messaging messageStatistics counters
+//     messageStatistics.reset();
+//     }
 
     public TaskStatistics getNodeStatistics() {
         return messageStatistics;
