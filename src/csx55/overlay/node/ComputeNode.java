@@ -10,6 +10,7 @@ import java.util.Map;
 import java.util.Random;
 import java.util.Scanner;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.HashMap;
 
 import csx55.overlay.routing.TaskStatistics;
 import csx55.overlay.task.Miner;
@@ -18,11 +19,12 @@ import csx55.overlay.tcp.TCPConnection;
 import csx55.overlay.tcp.TCPServer;
 import csx55.overlay.threads.ThreadPool;
 import csx55.overlay.wireformats.Event;
-import csx55.overlay.wireformats.MessagingNodesList;
+import csx55.overlay.wireformats.ComputeNodesList;
 import csx55.overlay.wireformats.Protocol;
 import csx55.overlay.wireformats.Register;
 import csx55.overlay.wireformats.RegisterResponse;
 import csx55.overlay.wireformats.TaskInitiate;
+import csx55.overlay.wireformats.TasksCount;
 import csx55.overlay.wireformats.TrafficSummary;
 
 /**
@@ -33,7 +35,7 @@ import csx55.overlay.wireformats.TrafficSummary;
  * connections,
  * message routing, and messageStatistics tracking.
  */
-public class MessagingNode implements Node, Protocol {
+public class ComputeNode implements Node, Protocol {
 
     /*
      * port to listen for incoming connections, configured during messaging node
@@ -57,6 +59,8 @@ public class MessagingNode implements Node, Protocol {
 
     private TaskStatistics messageStatistics = new TaskStatistics();
 
+    private Map<String, Integer> overlayTasksCount = new HashMap();
+
     /**
      * Constructs a new messaging node with the specified host and port.
      *
@@ -64,7 +68,7 @@ public class MessagingNode implements Node, Protocol {
      * @param nodePort The port on which the messaging node listens for incoming
      *                 connections.
      */
-    private MessagingNode(String nodeHost, int nodePort) {
+    private ComputeNode(String nodeHost, int nodePort) {
         this.nodeHost = nodeHost;
         this.nodePort = nodePort;
     }
@@ -88,7 +92,7 @@ public class MessagingNode implements Node, Protocol {
             /*
              * get local host name and use assigned nodePort to initialize a messaging node
              */
-            MessagingNode node = new MessagingNode(
+            ComputeNode node = new ComputeNode(
                     InetAddress.getLocalHost().getHostName(), nodePort);
 
             /* start a new TCP server thread */
@@ -192,12 +196,15 @@ public class MessagingNode implements Node, Protocol {
                 break;
 
             case Protocol.MESSAGING_NODES_LIST:
-                createOverlayConnections((MessagingNodesList) event);
+                createOverlayConnections((ComputeNodesList) event);
                 break;
 
             case Protocol.TASK_INITIATE:
                 handleTaskInitiation((TaskInitiate) event);
                 break;
+
+            case Protocol.TASKS_COUNT:
+                relayTasksCount((TasksCount) event);
 
         }
     }
@@ -218,7 +225,7 @@ public class MessagingNode implements Node, Protocol {
      * @param nodeList The MessagingNodesList containing information about the
      *                 peers.
      */
-    private void createOverlayConnections(MessagingNodesList messagingNodeList) {
+    private void createOverlayConnections(ComputeNodesList messagingNodeList) {
         List<String> peers = messagingNodeList.getPeersList();
         int threadPoolSize = messagingNodeList.getThreadPoolSize();
 
@@ -281,13 +288,24 @@ public class MessagingNode implements Node, Protocol {
                             new Random().nextInt());
                     threadPool.addTask(task);
 
-                    messageStatistics.addGenerated();
                 }
+                messageStatistics.addGenerated(noOfTasks);
+
+                /* now, first send no of tasks generated around the ring */
+                sendTasksCount(noOfTasks);
+
+                /* then, perform pair wise load balancing */
+
+                /*
+                 * finally, start thread pool and wait for task to complete
+                 * after tasks are completed send traffic summary to registry
+                 */
+
+                this.threadPool.start();
+
+                waitForTasksToComplete();
 
             }
-            this.threadPool.start();
-
-            waitForTasksToComplete();
 
         } catch (IOException e) {
             System.out.println("Error occurred while adding tasks to queue: " + e.getMessage());
@@ -298,7 +316,13 @@ public class MessagingNode implements Node, Protocol {
 
     private void waitForTasksToComplete() {
         while (true) {
-            long tasksTotal = messageStatistics.getGenerated() - messageStatistics.getPushed() + messageStatistics.getPulled();
+            long tasksTotal = messageStatistics.getGenerated() - messageStatistics.getPushed()
+                    + messageStatistics.getPulled();
+
+            /*
+             * this isn't gonna work because we have to find task completion at every round,
+             * and these are cumulative values
+             */
             if (tasksTotal == messageStatistics.getCompleted()) {
                 System.out.println("Completed count:" + messageStatistics.getCompleted());
                 System.out.println("Generated count:" + messageStatistics.getGenerated());
@@ -313,23 +337,70 @@ public class MessagingNode implements Node, Protocol {
      * a request from the registry. Also resets all associated counters.
      */
 
-//     private void sendTrafficSummary() {
-//     TrafficSummary trafficSummary = new TrafficSummary(nodeHost, nodePort,
-//     messageStatistics);
-//
-//     try {
-//     registryConnection.getTCPSenderThread().sendData(trafficSummary.getBytes());
-//     } catch (IOException | InterruptedException e) {
-//     System.out.println("Error occurred while sending traffic summary response: "
-//     + e.getMessage());
-//     e.printStackTrace();
-//     }
-//     // Reset all messaging messageStatistics counters
-//     messageStatistics.reset();
-//     }
+    // private void sendTrafficSummary() {
+    // TrafficSummary trafficSummary = new TrafficSummary(nodeHost, nodePort,
+    // messageStatistics);
+    //
+    // try {
+    // registryConnection.getTCPSenderThread().sendData(trafficSummary.getBytes());
+    // } catch (IOException | InterruptedException e) {
+    // System.out.println("Error occurred while sending traffic summary response: "
+    // + e.getMessage());
+    // e.printStackTrace();
+    // }
+    // // Reset all messaging messageStatistics counters
+    // messageStatistics.reset();
+    // }
 
     public TaskStatistics getNodeStatistics() {
         return messageStatistics;
+    }
+
+    public void sendTasksCount(int numberOfTasks) {
+        /* nodeDetail = ipAddress:port */
+        for (Map.Entry<String, TCPConnection> entry : connections.entrySet()) {
+            TCPConnection neighborConnection = entry.getValue();
+
+            try {
+                TasksCount countMessage = new TasksCount(getSelfReadable(), numberOfTasks);
+                neighborConnection.getTCPSenderThread().sendData(countMessage.getBytes());
+            } catch (IOException | InterruptedException e) {
+                System.out.println("Error occurred while sending generated tasks count: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+    }
+
+    public void relayTasksCount(TasksCount message) {
+        String nodeDetails = message.getHost();
+        /* if own message, stop */
+        if (nodeDetails == getSelfReadable()) {
+            return;
+        }
+
+        /*
+         * if other nodes message, store the count if not already in the tasks count
+         * hashmap, then relay forward
+         */
+        if (!overlayTasksCount.containsKey(nodeDetails)) {
+            overlayTasksCount.putIfAbsent(nodeDetails, message.getCount());
+        }
+        for (Map.Entry<String, TCPConnection> entry : connections.entrySet()) {
+            TCPConnection neighborConnection = entry.getValue();
+
+            try {
+                TasksCount countMessage = new TasksCount(nodeDetails, message.getCount());
+                neighborConnection.getTCPSenderThread().sendData(countMessage.getBytes());
+            } catch (IOException | InterruptedException e) {
+                System.out.println("Error occurred while sending generated tasks count: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
+
+    }
+
+    private String getSelfReadable() {
+        return this.nodeHost + ":" + this.nodePort;
     }
 
 }

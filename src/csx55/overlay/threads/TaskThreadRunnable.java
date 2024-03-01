@@ -2,7 +2,7 @@ package csx55.overlay.threads;
 
 import java.util.concurrent.BlockingQueue;
 
-import csx55.overlay.node.MessagingNode;
+import csx55.overlay.node.ComputeNode;
 import csx55.overlay.task.Miner;
 import csx55.overlay.task.Task;
 
@@ -15,10 +15,10 @@ public class TaskThreadRunnable implements Runnable {
     // the task queue this thread belongs to
     private BlockingQueue<Task> taskQueue;
 
-    private MessagingNode clientNode;
+    private ComputeNode clientNode;
 
     // default constructor will take the blocking queue it takes tasks from
-    public TaskThreadRunnable(BlockingQueue<Task> taskQueue, MessagingNode clientNode) {
+    public TaskThreadRunnable(BlockingQueue<Task> taskQueue, ComputeNode clientNode) {
         this.taskQueue = taskQueue;
         this.clientNode = clientNode;
     }
@@ -37,7 +37,6 @@ public class TaskThreadRunnable implements Runnable {
              */
             try {
 
-
                 /* in final version, this will take the mine instance */
                 Task task = taskQueue.take();
                 System.out.println("Retrieved a task. Starting..");
@@ -50,12 +49,13 @@ public class TaskThreadRunnable implements Runnable {
 
                 System.out.println("Completed a task.");
 
-//
-//                if (taskQueue.size() == 0) {
-//                    System.out.println("Completed count:" + clientNode.getNodeStatistics().getCompleted());
-//                    System.out.println("Generated count:" + clientNode.getNodeStatistics().getGenerated());
-//                }
-
+                //
+                // if (taskQueue.size() == 0) {
+                // System.out.println("Completed count:" +
+                // clientNode.getNodeStatistics().getCompleted());
+                // System.out.println("Generated count:" +
+                // clientNode.getNodeStatistics().getGenerated());
+                // }
 
             } catch (Exception e) {
                 System.out.println("Error mining task:" + e.getMessage());

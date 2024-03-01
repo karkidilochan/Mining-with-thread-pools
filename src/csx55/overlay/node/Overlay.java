@@ -7,7 +7,7 @@ import java.util.Map.Entry;
 
 import csx55.overlay.tcp.TCPConnection;
 // import csx55.overlay.wireformats.LinkWeights;
-import csx55.overlay.wireformats.MessagingNodesList;
+import csx55.overlay.wireformats.ComputeNodesList;
 
 /**
  * Represents the overlay network setup and management functionality.
@@ -44,7 +44,7 @@ public class Overlay {
             List<String> peers = node.peers;
             int numberOfPeers = peers.size();
 
-            MessagingNodesList message = new MessagingNodesList(numberOfPeers, peers, threadPoolSize);
+            ComputeNodesList message = new ComputeNodesList(numberOfPeers, peers, threadPoolSize);
             node.connection.getTCPSenderThread().sendData(message.getBytes());
         }
 

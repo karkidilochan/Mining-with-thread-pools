@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
-import csx55.overlay.node.MessagingNode;
+import csx55.overlay.node.ComputeNode;
 import csx55.overlay.task.Task;
 
 /* A new threadpool is created for each computation node
@@ -21,7 +21,7 @@ public class ThreadPool {
     private Thread[] threads;
 
     // default constructor
-    public ThreadPool(int numberOfThreads, MessagingNode messagingNode) {
+    public ThreadPool(int numberOfThreads, ComputeNode messagingNode) {
         this.threads = new Thread[numberOfThreads];
 
         int maxTasks = 1000;
@@ -53,7 +53,6 @@ public class ThreadPool {
     public void executeTask(Runnable task) {
         // this.taskQueue.offer(task);
     }
-
 
     public ArrayList<TaskThreadRunnable> getTasksRunnable() {
         return runnableTasks;

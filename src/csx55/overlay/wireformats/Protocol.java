@@ -16,6 +16,7 @@ public interface Protocol {
     final int TASK_COMPLETE = 7;
     final int PULL_TRAFFIC_SUMMARY = 8;
     final int TRAFFIC_SUMMARY = 9;
+    final int TASKS_COUNT = 10;
 
     final byte SUCCESS = (byte) 200;
     final byte FAILURE = (byte) 500;

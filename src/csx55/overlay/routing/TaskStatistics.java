@@ -32,8 +32,8 @@ public class TaskStatistics {
      * 
      * @param payload The size of the payload of the sent message.
      */
-    public void addGenerated() {
-        generatedCount.getAndIncrement();
+    public void addGenerated(int tasksCount) {
+        generatedCount.getAndAdd(tasksCount);
     }
 
     /**

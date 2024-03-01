@@ -13,7 +13,7 @@ import java.util.List;
 /**
  * Represents a message containing a list of messaging nodes.
  */
-public class MessagingNodesList implements Event {
+public class ComputeNodesList implements Event {
 
     private int type;
     private int numberOfPeers;
@@ -28,7 +28,7 @@ public class MessagingNodesList implements Event {
      * @param numberOfPeers The number of peers in the list.
      * @param peers         The list of peers.
      */
-    public MessagingNodesList(int numberOfPeers, List<String> peers, int threadPoolSize) {
+    public ComputeNodesList(int numberOfPeers, List<String> peers, int threadPoolSize) {
         this.type = Protocol.MESSAGING_NODES_LIST;
         this.numberOfPeers = numberOfPeers;
         this.peers = peers;
@@ -40,7 +40,7 @@ public class MessagingNodesList implements Event {
      * 
      * @param marshalledData The marshalled byte array containing the data.
      */
-    public MessagingNodesList(byte[] marshalledData) throws IOException {
+    public ComputeNodesList(byte[] marshalledData) throws IOException {
         ByteArrayInputStream inputStream = new ByteArrayInputStream(marshalledData);
         DataInputStream din = new DataInputStream(new BufferedInputStream(inputStream));
 

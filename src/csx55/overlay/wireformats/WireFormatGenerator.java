@@ -43,7 +43,7 @@ public class WireFormatGenerator {
                 return new Register(marshalledData);
 
             case Protocol.MESSAGING_NODES_LIST:
-                return new MessagingNodesList(marshalledData);
+                return new ComputeNodesList(marshalledData);
 
             // case Protocol.LINK_WEIGHTS:
             // return new LinkWeights(marshalledData);
