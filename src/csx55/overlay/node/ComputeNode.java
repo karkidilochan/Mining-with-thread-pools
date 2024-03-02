@@ -252,7 +252,7 @@ public class ComputeNode implements Node, Protocol {
             }
         }
         int numberOfPeers = messagingNodeList.getNumberOfPeers();
-        System.out.println("Established connections with " + Integer.toString(numberOfPeers) + " peers.\n");
+        System.out.println("Established connections with " + Integer.toString(numberOfPeers) + " peers.\n" + peers);
 
     }
 
@@ -267,7 +267,7 @@ public class ComputeNode implements Node, Protocol {
         String nodeDetails = register.getConnectionReadable();
 
         // Store the connection in the connections map
-        connections.put(nodeDetails, connection);
+//        connections.put(nodeDetails, connection);
     }
 
     private void handleTaskInitiation(TaskInitiate taskInitiate) {
@@ -301,11 +301,13 @@ public class ComputeNode implements Node, Protocol {
                  * after tasks are completed send traffic summary to registry
                  */
 
-                this.threadPool.start();
 
-                waitForTasksToComplete();
 
             }
+//            TODO: move it inside the scope of rounds
+            this.threadPool.start();
+
+            waitForTasksToComplete();
 
         } catch (IOException e) {
             System.out.println("Error occurred while adding tasks to queue: " + e.getMessage());
@@ -374,7 +376,7 @@ public class ComputeNode implements Node, Protocol {
     public void relayTasksCount(TasksCount message) {
         String nodeDetails = message.getHost();
         /* if own message, stop */
-        if (nodeDetails == getSelfReadable()) {
+        if (nodeDetails.equals(getSelfReadable())) {
             return;
         }
 
@@ -382,15 +384,13 @@ public class ComputeNode implements Node, Protocol {
          * if other nodes message, store the count if not already in the tasks count
          * hashmap, then relay forward
          */
-        if (!overlayTasksCount.containsKey(nodeDetails)) {
-            overlayTasksCount.putIfAbsent(nodeDetails, message.getCount());
-        }
+
+            overlayTasksCount.put(nodeDetails, message.getCount());
         for (Map.Entry<String, TCPConnection> entry : connections.entrySet()) {
             TCPConnection neighborConnection = entry.getValue();
 
             try {
-                TasksCount countMessage = new TasksCount(nodeDetails, message.getCount());
-                neighborConnection.getTCPSenderThread().sendData(countMessage.getBytes());
+                neighborConnection.getTCPSenderThread().sendData(message.getBytes());
             } catch (IOException | InterruptedException e) {
                 System.out.println("Error occurred while sending generated tasks count: " + e.getMessage());
                 e.printStackTrace();

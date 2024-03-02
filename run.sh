@@ -17,7 +17,7 @@ gnome-terminal -- bash -c "ssh -t $HOST 'cd $BUILD_DIR; java -cp . csx55.overlay
 
 sleep 1
 
-COMMAND="cd $BUILD_DIR; java -cp . csx55.overlay.node.MessagingNode $HOST $PORT"
+COMMAND="cd $BUILD_DIR; java -cp . csx55.overlay.node.ComputeNode $HOST $PORT"
 
 for ((j=0; j<${1:-1}; j++))
 do

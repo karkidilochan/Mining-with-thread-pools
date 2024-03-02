@@ -63,6 +63,9 @@ public class WireFormatGenerator {
             case Protocol.TRAFFIC_SUMMARY:
                 return new TrafficSummary(marshalledData);
 
+            case Protocol.TASKS_COUNT:
+                return new TasksCount(marshalledData);
+
             default:
                 System.out.println("Error: WireFormat could not be generated. " + type);
                 return null;
