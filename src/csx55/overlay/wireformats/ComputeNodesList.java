@@ -18,6 +18,7 @@ public class ComputeNodesList implements Event {
     private int type;
     private int numberOfPeers;
     private int threadPoolSize;
+    private int overlaySize;
 
     private List<String> peers;
 
@@ -28,11 +29,12 @@ public class ComputeNodesList implements Event {
      * @param numberOfPeers The number of peers in the list.
      * @param peers         The list of peers.
      */
-    public ComputeNodesList(int numberOfPeers, List<String> peers, int threadPoolSize) {
+    public ComputeNodesList(int numberOfPeers, List<String> peers, int threadPoolSize, int overlaySize) {
         this.type = Protocol.MESSAGING_NODES_LIST;
         this.numberOfPeers = numberOfPeers;
         this.peers = peers;
         this.threadPoolSize = threadPoolSize;
+        this.overlaySize = overlaySize;
     }
 
     /**
@@ -55,6 +57,8 @@ public class ComputeNodesList implements Event {
             din.readFully(bytes);
             this.peers.add(new String(bytes));
         }
+
+        this.overlaySize = din.readInt();
 
         inputStream.close();
         din.close();
@@ -83,6 +87,8 @@ public class ComputeNodesList implements Event {
             dout.write(bytes);
         }
 
+        dout.writeInt(overlaySize);
+
         // make sure buffer is flushed
         dout.flush();
 
@@ -104,6 +110,10 @@ public class ComputeNodesList implements Event {
 
     public int getThreadPoolSize() {
         return threadPoolSize;
+    }
+
+    public int getOverlaySize() {
+        return overlaySize;
     }
 
     /**

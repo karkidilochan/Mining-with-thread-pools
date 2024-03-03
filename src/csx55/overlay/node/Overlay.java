@@ -44,7 +44,7 @@ public class Overlay {
             List<String> peers = node.peers;
             int numberOfPeers = peers.size();
 
-            ComputeNodesList message = new ComputeNodesList(numberOfPeers, peers, threadPoolSize);
+            ComputeNodesList message = new ComputeNodesList(numberOfPeers, peers, threadPoolSize, totalConnections);
             node.connection.getTCPSenderThread().sendData(message.getBytes());
         }
 

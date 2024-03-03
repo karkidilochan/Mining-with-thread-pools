@@ -1,11 +1,13 @@
 package csx55.overlay.threads;
 
 import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
 
 import csx55.overlay.node.ComputeNode;
 import csx55.overlay.task.Task;
+import csx55.overlay.task.WorkerTask;
 
 /* A new threadpool is created for each computation node
  * its size is defined during the creation of an overlay
@@ -64,7 +66,14 @@ public class ThreadPool {
         }
     }
 
-    public void addTask(Task task) {
-        this.taskQueue.offer(task);
+    public void addTasks(List<Task> tasks) {
+        for (Task task : tasks) {
+            try {
+                taskQueue.put(task); // Add task to the taskQueue
+            } catch (InterruptedException e) {
+                System.err.println("Error occurred while adding task to the queue: " + e.getMessage());
+                e.printStackTrace();
+            }
+        }
     }
 }
