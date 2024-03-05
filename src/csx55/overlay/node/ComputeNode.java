@@ -357,6 +357,7 @@ public class ComputeNode implements Node, Protocol {
             /*
              * send traffic summary to registry after tasks after all rounds are completed
              */
+            // sendTaskCompleteMessage();
 
         } catch (IOException e) {
             System.out.println("Error occurred while adding tasks to queue: " + e.getMessage());
