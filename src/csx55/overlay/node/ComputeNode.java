@@ -64,7 +64,9 @@ public class ComputeNode implements Node, Protocol {
      * data structure to store connections to other messaging nodes received from
      * Registry
      */
-    private Map<String, TCPConnection> connections = new ConcurrentHashMap<>();
+    private Map<String, TCPConnection> outgoingConnection = new ConcurrentHashMap<>();
+
+    private Map<String, TCPConnection> incomingConnection = new ConcurrentHashMap<>();
 
     private TaskStatistics messageStatistics = new TaskStatistics();
 
@@ -288,7 +290,7 @@ public class ComputeNode implements Node, Protocol {
                 connection.start();
 
                 // also recording outgoing connections
-                connections.put(peer, connection);
+                outgoingConnection.put(peer, connection);
 
                 /* then, create the thread pool of given size */
                 this.threadPool = new ThreadPool(threadPoolSize, this);
@@ -315,7 +317,7 @@ public class ComputeNode implements Node, Protocol {
         String nodeDetails = register.getConnectionReadable();
 
         // Store the connection in the connections map
-        // connections.put(nodeDetails, connection);
+        incomingConnection.put(nodeDetails, connection);
     }
 
     private void handleTaskInitiation(TaskInitiate taskInitiate) {
@@ -384,8 +386,7 @@ public class ComputeNode implements Node, Protocol {
         this.balancedCount = (int) Math.ceil(totalTasks / overlaySize);
     }
 
-    private void balanceLoad() {
-
+    private boolean checkIfBalanced() {
         int totalCount = generatedTasks.size() + migratedTasks.size();
 
         int balanceDifference = Math.abs(totalCount - this.balancedCount);
@@ -394,13 +395,20 @@ public class ComputeNode implements Node, Protocol {
         int tolerance = (int) 0.1 * this.balancedCount;
         int lowerBound = balancedCount - tolerance;
         int upperBound = balancedCount + tolerance;
-        /* if difference is less than batch size no load migration needed */
-        if (balanceDifference >= lowerBound && balanceDifference <= upperBound) {
+        return balanceDifference >= lowerBound && balanceDifference <= upperBound;
+    }
+
+    private void balanceLoad() {
+
+        if (checkIfBalanced()) {
             /* push tasks to thread queue and start */
             // TODO
+            this.READY_TO_EXECUTE.set(true);
             startThreadPool();
         } else {
-            for (Map.Entry<String, TCPConnection> entry : connections.entrySet()) {
+            int totalCount = generatedTasks.size() + migratedTasks.size();
+
+            for (Map.Entry<String, TCPConnection> entry : outgoingConnection.entrySet()) {
                 TCPConnection neighborConnection = entry.getValue();
                 /*
                  * send a request to migrate to peers
@@ -417,6 +425,26 @@ public class ComputeNode implements Node, Protocol {
                 }
 
             }
+            // for (Map.Entry<String, TCPConnection> entry : incomingConnection.entrySet())
+            // {
+            // TCPConnection neighborConnection = entry.getValue();
+            // /*
+            // * send a request to migrate to peers
+            // * check response to see their current total tasks count, and if they are
+            // ready
+            // * to start
+            // * if they are ready to start,
+            // */
+            // try {
+            // CheckStatus message = new CheckStatus(totalCount);
+            // neighborConnection.getTCPSenderThread().sendData(message.getBytes());
+            // } catch (IOException | InterruptedException e) {
+            // System.out.println("Error occurred while sending status check: " +
+            // e.getMessage());
+            // e.printStackTrace();
+            // }
+
+            // }
         }
 
     }
@@ -452,7 +480,7 @@ public class ComputeNode implements Node, Protocol {
 
     public void sendTasksCount(int numberOfTasks) {
         /* nodeDetail = ipAddress:port */
-        for (Map.Entry<String, TCPConnection> entry : connections.entrySet()) {
+        for (Map.Entry<String, TCPConnection> entry : outgoingConnection.entrySet()) {
             TCPConnection neighborConnection = entry.getValue();
 
             try {
@@ -480,7 +508,7 @@ public class ComputeNode implements Node, Protocol {
         if (!overlayTasksCount.containsKey(nodeDetails)) {
             overlayTasksCount.putIfAbsent(nodeDetails, message.getCount());
         }
-        for (Map.Entry<String, TCPConnection> entry : connections.entrySet()) {
+        for (Map.Entry<String, TCPConnection> entry : outgoingConnection.entrySet()) {
             TCPConnection neighborConnection = entry.getValue();
 
             try {
@@ -538,24 +566,31 @@ public class ComputeNode implements Node, Protocol {
             }
         } else {
             if (isBalanced) {
-                this.READY_TO_EXECUTE.set(true);
-                startThreadPool();
                 try {
                     ReadyToExecute response = new ReadyToExecute();
                     connection.getTCPSenderThread().sendData(response.getBytes());
+                    this.READY_TO_EXECUTE.set(true);
+                    startThreadPool();
                 } catch (IOException | InterruptedException e) {
                     System.out.println("Error occurred while sending status response: " + e.getMessage());
                     e.printStackTrace();
                 }
             } else {
                 int balanceDifference = Math.abs(totalCount - this.balancedCount);
+                int targetCount;
+                if (neighborsCount < balanceDifference) {
+                    targetCount = neighborsCount;
+                } else {
+                    targetCount = balanceDifference;
+                }
+
                 if (totalCount > neighborsCount) {
                     /* push load in batches equal to balance difference */
-                    migrateTasks(balanceDifference, connection);
+                    migrateTasks(targetCount, connection);
                 } else if (totalCount < neighborsCount) {
                     /* send pull request for balance difference */
                     try {
-                        PullRequest response = new PullRequest(balanceDifference);
+                        PullRequest response = new PullRequest(targetCount);
                         connection.getTCPSenderThread().sendData(response.getBytes());
                     } catch (IOException | InterruptedException e) {
                         System.out.println("Error occurred while sending pull request: " + e.getMessage());
