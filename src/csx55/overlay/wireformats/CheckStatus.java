@@ -12,17 +12,19 @@ import java.io.IOException;
  * Represents a message indicating the initiation of a task
  * with a specified number of rounds.
  */
-public class RequestTasksCount implements Event {
+public class CheckStatus implements Event {
 
     private int type;
+    private int tasksCount;
 
     /**
      * Constructs a TaskInitiate object with the specified number of rounds.
      * 
      * @param numberOfRounds The number of rounds for the task.
      */
-    public RequestTasksCount() {
-        this.type = Protocol.REQUEST_TASKS_COUNT;
+    public CheckStatus(int tasksCount) {
+        this.type = Protocol.CHECK_STATUS;
+        this.tasksCount = tasksCount;
     }
 
     /**
@@ -30,11 +32,12 @@ public class RequestTasksCount implements Event {
      * 
      * @param marshalledData The marshalled byte array containing the data.
      */
-    public RequestTasksCount(byte[] marshalledData) throws IOException {
+    public CheckStatus(byte[] marshalledData) throws IOException {
         ByteArrayInputStream inputData = new ByteArrayInputStream(marshalledData);
         DataInputStream din = new DataInputStream(new BufferedInputStream(inputData));
 
         this.type = din.readInt();
+        this.tasksCount = din.readInt();
 
         inputData.close();
         din.close();
@@ -54,6 +57,7 @@ public class RequestTasksCount implements Event {
         DataOutputStream dout = new DataOutputStream(new BufferedOutputStream(opStream));
 
         dout.writeInt(type);
+        dout.writeInt(tasksCount);
         dout.flush();
 
         byte[] marshalledData = opStream.toByteArray();
@@ -62,6 +66,10 @@ public class RequestTasksCount implements Event {
         dout.close();
 
         return marshalledData;
+    }
+
+    public int getCount() {
+        return tasksCount;
     }
 
 }

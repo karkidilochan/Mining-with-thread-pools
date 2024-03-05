@@ -75,6 +75,11 @@ public class WireFormatGenerator {
             case Protocol.MIGRATE_RESPONSE:
                 return new MigrateResponse(marshalledData);
 
+            case Protocol.CHECK_STATUS:
+                return new CheckStatus(marshalledData);
+
+            case Protocol.STATUS_RESPONSE:
+                return new ReadyToExecute(marshalledData);
 
             default:
                 System.out.println("Error: WireFormat could not be generated. " + type);

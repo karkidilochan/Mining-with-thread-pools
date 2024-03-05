@@ -19,11 +19,10 @@ public class TrafficSummary implements Event {
     private String ipAddress;
     private int portNumber;
 
-    private int sentMessagesCount;
-    private long sentMessagesSummation;
-    private int receivedMessagesCount;
-    private long receivedMessagesSummation;
-    private int relayedMessagesCount;
+    private long generatedCount;
+    private long pulledCount;
+    private long pushedCount;
+    private long completedCount;
 
     /**
      * Constructs a TrafficSummary object with the specified parameters.
@@ -32,17 +31,15 @@ public class TrafficSummary implements Event {
      * @param portNumber         The port number.
      * @param messagesStatistics The statistics of messages.
      */
-    // public TrafficSummary(String ipAddress, int portNumber, TaskStatistics
-    // messagesStats) {
-    // this.type = Protocol.TRAFFIC_SUMMARY;
-    // this.ipAddress = ipAddress;
-    // this.portNumber = portNumber;
-    // this.sentMessagesCount = messagesStats.getSentMessagesCount();
-    // this.sentMessagesSummation = messagesStats.getSentMessagesSummation();
-    // this.receivedMessagesCount = messagesStats.getReceivedMessagesCount();
-    // this.receivedMessagesSummation = messagesStats.getReceivedSummationCount();
-    // this.relayedMessagesCount = messagesStats.getRelayedMessagesCount();
-    // }
+    public TrafficSummary(String ipAddress, int portNumber, TaskStatistics messagesStats) {
+        this.type = Protocol.TRAFFIC_SUMMARY;
+        this.ipAddress = ipAddress;
+        this.portNumber = portNumber;
+        this.generatedCount = messagesStats.getGenerated();
+        this.pulledCount = messagesStats.getPulled();
+        this.pushedCount = messagesStats.getPushed();
+        this.completedCount = messagesStats.getCompleted();
+    }
 
     /**
      * Constructs a TrafficSummary object by unmarshalling the byte array.
@@ -60,34 +57,29 @@ public class TrafficSummary implements Event {
 
         this.ipAddress = new String(bytes);
         this.portNumber = din.readInt();
-        this.sentMessagesCount = din.readInt();
-        this.sentMessagesSummation = din.readLong();
-        this.receivedMessagesCount = din.readInt();
-        this.receivedMessagesSummation = din.readLong();
-        this.relayedMessagesCount = din.readInt();
+        this.generatedCount = din.readLong();
+        this.pulledCount = din.readLong();
+        this.pushedCount = din.readLong();
+        this.completedCount = din.readLong();
 
         inputData.close();
         din.close();
     }
 
-    public int getSentMessagesCount() {
-        return sentMessagesCount;
+    public long getGenerated() {
+        return generatedCount;
     }
 
-    public int getReceivedMessagesCount() {
-        return receivedMessagesCount;
+    public long getPulled() {
+        return pulledCount;
     }
 
-    public long getSentMessagesSummation() {
-        return sentMessagesSummation;
+    public long getPushed() {
+        return pushedCount;
     }
 
-    public long getReceivedSummationCount() {
-        return receivedMessagesSummation;
-    }
-
-    public int getRelayedMessagesCount() {
-        return relayedMessagesCount;
+    public long getCompleted() {
+        return completedCount;
     }
 
     public int getType() {
@@ -111,11 +103,10 @@ public class TrafficSummary implements Event {
         dout.write(ipBytes);
 
         dout.writeInt(portNumber);
-        dout.writeInt(sentMessagesCount);
-        dout.writeLong(sentMessagesSummation);
-        dout.writeInt(receivedMessagesCount);
-        dout.writeLong(receivedMessagesSummation);
-        dout.writeInt(relayedMessagesCount);
+        dout.writeLong(generatedCount);
+        dout.writeLong(pulledCount);
+        dout.writeLong(pushedCount);
+        dout.writeLong(completedCount);
 
         dout.flush();
         byte[] marshalledData = opStream.toByteArray();
@@ -134,11 +125,10 @@ public class TrafficSummary implements Event {
     public String toString() {
         return String.format("%1$20s %2$12s %3$10s %4$15s %5$15s %6$10s",
                 ipAddress + ":" + Integer.toString(portNumber),
-                Integer.toString(sentMessagesCount),
-                Integer.toString(receivedMessagesCount),
-                Long.toString(sentMessagesSummation),
-                Long.toString(receivedMessagesSummation),
-                Integer.toString(relayedMessagesCount));
+                Long.toString(generatedCount),
+                Long.toString(pulledCount),
+                Long.toString(pushedCount),
+                Long.toString(completedCount));
     }
 
 }

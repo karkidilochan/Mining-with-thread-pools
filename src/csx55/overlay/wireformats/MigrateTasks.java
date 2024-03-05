@@ -19,7 +19,7 @@ import csx55.overlay.task.Task;
  * Represents a message indicating the initiation of a task
  * with a specified number of rounds.
  */
-public class MigrateTasks implements Event{
+public class MigrateTasks implements Event {
 
     int type;
     private List<Task> tasksList = new ArrayList<>();;
@@ -83,6 +83,10 @@ public class MigrateTasks implements Event{
 
     public List<Task> getTasks() {
         return this.tasksList;
+    }
+
+    public int getTasksSize() {
+        return this.tasksList.size();
     }
 
 }

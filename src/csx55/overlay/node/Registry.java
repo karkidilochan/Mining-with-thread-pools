@@ -20,7 +20,7 @@ import csx55.overlay.wireformats.PullTrafficSummary;
 import csx55.overlay.wireformats.Register;
 import csx55.overlay.wireformats.RegisterResponse;
 import csx55.overlay.wireformats.TaskInitiate;
-// import csx55.overlay.wireformats.TrafficSummary;;
+import csx55.overlay.wireformats.TrafficSummary;
 
 /**
  * The Registry class maintains information about messaging nodes and handles
@@ -43,7 +43,9 @@ public class Registry implements Node {
 
     private AtomicInteger completedTasks = new AtomicInteger(0);
 
-    // private List<TrafficSummary> trafficSummary = new ArrayList<>();
+    private List<TrafficSummary> trafficSummary = new ArrayList<>();
+    // private Map<String, TrafficSummary> trafficSummary = new
+    // ConcurrentHashMap<>();
 
     /**
      * The main method of the Registry application.
@@ -129,13 +131,9 @@ public class Registry implements Node {
                 handleRegistrationEvent((Register) event, connection, false);
                 break;
 
-            case Protocol.TASK_COMPLETE:
-                handleTaskCompleteEvent();
+            case Protocol.TRAFFIC_SUMMARY:
+                handleTaskSummary((TrafficSummary) event);
                 break;
-
-            // case Protocol.TRAFFIC_SUMMARY:
-            // printTrafficSummary((TrafficSummary) event);
-            // break;
         }
     }
 
@@ -292,7 +290,7 @@ public class Registry implements Node {
      * initiating traffic summary retrieval
      * when all tasks have been completed.
      */
-    private synchronized void handleTaskCompleteEvent() {
+    private synchronized void handleTaskSummary(TrafficSummary summary) {
         completedTasks.getAndIncrement();
 
         if (completedTasks.get() == connections.size()) {
@@ -303,38 +301,17 @@ public class Registry implements Node {
                 System.out.println("Thread sleep interrupted: " + e.getMessage());
                 e.printStackTrace();
             }
-            connections.forEach((k, connection) -> {
-                PullTrafficSummary request = new PullTrafficSummary();
-                try {
-                    connection.getTCPSenderThread().sendData(request.getBytes());
-                } catch (IOException | InterruptedException e) {
-                    System.out.println(
-                            "Error occurred while sending traffic summary request to connection: " + e.getMessage());
-                    e.printStackTrace();
-                    return;
-                }
-            });
+            trafficSummary.add(summary);
+
+            if (trafficSummary.size() == connections.size()) {
+                display(trafficSummary);
+                trafficSummary.clear();
+            }
 
             // Finally, reset the completed task count
             completedTasks.set(0);
         }
     }
-
-    /**
-     * Handles the response containing traffic summary information from overlay
-     * nodes.
-     * Displays the statistics if responses are received from all nodes.
-     *
-     * @param summary The traffic summary received from an overlay node.
-     */
-    // private synchronized void printTrafficSummary(TrafficSummary summary) {
-    // trafficSummary.add(summary);
-
-    // if (trafficSummary.size() == connections.size()) {
-    // (new TaskStatistics()).display(trafficSummary);
-    // trafficSummary.clear();
-    // }
-    // }
 
     /**
      * Lists the messaging nodes registered in the overlay.
@@ -348,5 +325,46 @@ public class Registry implements Node {
             System.out.println("\nThere are " + connections.size() + " total links:\n");
             connections.forEach((key, value) -> System.out.println("\t" + key));
         }
+    }
+
+    public void display(List<TrafficSummary> statisticsSummary) {
+        if (statisticsSummary.size() == 0) {
+            System.out.println("No message statistics available.");
+            return;
+        }
+        long totalGenerated = 0;
+        long totalPulled = 0;
+        long totalPushed = 0;
+        long totalCompleted = 0;
+
+        System.out.println(
+                String.format("\n%1$20s %2$1s %3$1s %4$5s %5$5s %6$5s",
+                        "",
+                        "No. of generated tasks",
+                        "No. of pulled tasks",
+                        "No. of pushed tasks",
+                        "No. of completed tasks",
+                        "% of total tasks performed"));
+
+        for (TrafficSummary summary : statisticsSummary) {
+            System.out.println(summary.toString());
+            totalGenerated += summary.getGenerated();
+            totalPulled += summary.getPulled();
+            totalPushed += summary.getPushed();
+            totalCompleted += summary.getCompleted();
+        }
+
+        long totalPerformed = totalCompleted + totalGenerated + totalPulled + totalPushed;
+
+        for (TrafficSummary summary : statisticsSummary) {
+            float percentCompleted = (totalCompleted / totalPerformed) * 100;
+            String result = summary.toString() + percentCompleted;
+            System.out.println(result);
+        }
+
+        System.out.println(String.format("%1$20s %2$40s %3$20s %4$15s %5$15s\n",
+                "Sum:", Long.toString(totalGenerated),
+                Long.toString(totalPulled), Long.toString(totalPushed),
+                Long.toString(totalCompleted), (totalGenerated / totalPerformed) * 100));
     }
 }

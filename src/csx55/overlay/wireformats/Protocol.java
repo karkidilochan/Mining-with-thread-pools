@@ -17,8 +17,8 @@ public interface Protocol {
     final int PULL_TRAFFIC_SUMMARY = 8;
     final int TRAFFIC_SUMMARY = 9;
     final int TASKS_COUNT = 10;
-    final int REQUEST_TASKS_COUNT = 11;
-    final int RESPONSE_TASKS_COUNT = 12;
+    final int CHECK_STATUS = 11;
+    final int STATUS_RESPONSE = 12;
     final int MIGRATE_TASKS = 13;
     final int PULL_REQUEST = 14;
     final int MIGRATE_RESPONSE = 15;

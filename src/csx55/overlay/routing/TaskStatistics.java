@@ -41,16 +41,16 @@ public class TaskStatistics {
      * 
      * @param payload The size of the payload of the received message.
      */
-    public void addPulled() {
-        pulledCount.getAndIncrement();
+    public void addPulled(int tasksCount) {
+        pulledCount.getAndAdd(tasksCount);
     }
 
     public void addCompleted() {
         completedCount.getAndIncrement();
     }
 
-    public void addPushed() {
-        pushedCount.getAndIncrement();
+    public void addPushed(int tasksCount) {
+        pushedCount.getAndAdd(tasksCount);
     }
 
     /**

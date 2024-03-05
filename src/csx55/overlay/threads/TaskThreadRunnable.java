@@ -30,7 +30,6 @@ public class TaskThreadRunnable implements Runnable {
          */
         this.thread = Thread.currentThread();
         while (true) {
-            System.out.println("Initiating a workload...");
             /*
              * then, as long as current task thread isn't stopped, take task from task queue
              * and run
@@ -39,7 +38,6 @@ public class TaskThreadRunnable implements Runnable {
 
                 /* in final version, this will take the mine instance */
                 Task task = taskQueue.take();
-                System.out.println("Retrieved a task. Starting..");
                 /* call mine function of miner here */
                 Miner miner = new Miner();
                 miner.startMiner(task);
@@ -47,19 +45,22 @@ public class TaskThreadRunnable implements Runnable {
                 /* increase count for completed tasks */
                 clientNode.getNodeStatistics().addCompleted();
 
-                System.out.println("Completed a task.");
-
-                //
-                // if (taskQueue.size() == 0) {
-                // System.out.println("Completed count:" +
-                // clientNode.getNodeStatistics().getCompleted());
-                // System.out.println("Generated count:" +
-                // clientNode.getNodeStatistics().getGenerated());
-                // }
+                checkIfEmpty();
 
             } catch (Exception e) {
                 System.out.println("Error mining task:" + e.getMessage());
                 e.printStackTrace();
+            }
+        }
+
+    }
+
+    private synchronized void checkIfEmpty() {
+        boolean roundCompleted = clientNode.getIfRoundComplete();
+        if (!roundCompleted) {
+            if (taskQueue.size() == 0) {
+                roundCompleted = true;
+                clientNode.notifyRoundComplete();
             }
         }
 
