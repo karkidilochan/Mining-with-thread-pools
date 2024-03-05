@@ -66,6 +66,16 @@ public class WireFormatGenerator {
             case Protocol.TASKS_COUNT:
                 return new TasksCount(marshalledData);
 
+            case Protocol.MIGRATE_TASKS:
+                return new MigrateTasks(marshalledData);
+
+            case Protocol.PULL_REQUEST:
+                return new PullRequest(marshalledData);
+
+            case Protocol.MIGRATE_RESPONSE:
+                return new MigrateResponse(marshalledData);
+
+
             default:
                 System.out.println("Error: WireFormat could not be generated. " + type);
                 return null;

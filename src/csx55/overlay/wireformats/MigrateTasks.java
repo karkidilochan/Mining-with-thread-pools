@@ -10,6 +10,7 @@ import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
 import java.io.Serializable;
+import java.util.ArrayList;
 import java.util.List;
 
 import csx55.overlay.task.Task;
@@ -18,10 +19,10 @@ import csx55.overlay.task.Task;
  * Represents a message indicating the initiation of a task
  * with a specified number of rounds.
  */
-public class MigrateTasks implements Event, Serializable {
+public class MigrateTasks implements Event{
 
     int type;
-    private List<Task> tasksList;
+    private List<Task> tasksList = new ArrayList<>();;
 
     public MigrateTasks(List<Task> tasksList) {
         this.type = Protocol.MIGRATE_TASKS;

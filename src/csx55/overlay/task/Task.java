@@ -1,8 +1,9 @@
 package csx55.overlay.task;
 
+import java.io.Serializable;
 import java.nio.charset.StandardCharsets;
 
-public class Task {
+public class Task implements Serializable {
     private final String ip;
     private final int port;
     private final int roundNumber;

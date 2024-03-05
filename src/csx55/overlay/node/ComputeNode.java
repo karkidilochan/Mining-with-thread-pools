@@ -66,13 +66,12 @@ public class ComputeNode implements Node, Protocol {
 
     private TaskStatistics messageStatistics = new TaskStatistics();
 
-    private Map<String, Integer> overlayTasksCount = new ConcurrentHashMap<>();
+    private Map<String, Integer> overlayTasksCount = new ConcurrentHashMap<>( );
 
     private int overlaySize;
 
-    private List<Task> generatedTasks;
-
-    private List<Task> migratedTasks;
+    private List<Task> generatedTasks = new ArrayList<>();
+    private List<Task> migratedTasks = new ArrayList<>();
 
     private int balancedCount;
 
@@ -322,8 +321,7 @@ public class ComputeNode implements Node, Protocol {
         try {
             for (int round = 1; round < rounds + 1; round++) {
                 // TODO:
-                // int noOfTasks = random.nextInt(1000) + 1;
-                int noOfTasks = 5;
+                 int noOfTasks = random.nextInt(100) + 1;
                 for (int i = 1; i < noOfTasks + 1; i++) {
                     Task task = new Task(InetAddress.getLocalHost().getHostAddress(), nodePort, i,
                             new Random().nextInt());
@@ -335,6 +333,7 @@ public class ComputeNode implements Node, Protocol {
 
                 /* now, first send no of tasks generated around the ring */
                 sendTasksCount(noOfTasks);
+                System.out.println("Sent tasks count to peers");
 
                 /* then, wait for all tasks count and perform pair wise load balancing */
                 calculateOverlayMean();
@@ -344,7 +343,7 @@ public class ComputeNode implements Node, Protocol {
                  */
 
             }
-            // TODO: move it inside the scope of rounds
+            // TODO: add a latch/semaphore to indicate if ready for execution
 
             /*
              * send traffic summary to registry after tasks of all rounds are completed
@@ -358,8 +357,10 @@ public class ComputeNode implements Node, Protocol {
     }
 
     private void calculateOverlayMean() {
+        System.out.println("Waiting to receive count of tasks from all nodes...");
+
         while (true) {
-            if (overlayTasksCount.size() == overlaySize) {
+            if (overlayTasksCount.size() == overlaySize-1) {
                 break;
             }
         }
@@ -374,33 +375,41 @@ public class ComputeNode implements Node, Protocol {
         /* estimate fair share of work */
         this.balancedCount = (int) Math.ceil(totalTasks / overlaySize);
         int balanceDifference = Math.abs(totalCount - this.balancedCount);
-
+        System.out.println(overlayTasksCount);
+        System.out.println("Gen count vs mean difference" + generatedTasks.size() + " " + balanceDifference);
         /* if difference is less than batch size no load migration needed */
         if (balanceDifference < this.BATCH_SIZE) {
             /* push tasks to thread queue and start */
             // TODO
-            return;
+            startThreadPool();
         }
-
-        for (Map.Entry<String, TCPConnection> entry : connections.entrySet()) {
-            TCPConnection neighborConnection = entry.getValue();
-            int neighborsCount = overlayTasksCount.get(entry.getKey());
-
-            if (totalCount > neighborsCount) {
-                /* push load in batches equal to balance difference */
-                migrateTasks(balanceDifference, neighborConnection);
-            } else if (totalCount < neighborsCount) {
-                /* send pull request for balance difference */
-                try {
-                    PullRequest message = new PullRequest(balanceDifference);
-                    neighborConnection.getTCPSenderThread().sendData(message.getBytes());
-                } catch (IOException | InterruptedException e) {
-                    System.out.println("Error occurred while sending pull request: " + e.getMessage());
-                    e.printStackTrace();
+        else {
+            for (Map.Entry<String, TCPConnection> entry : connections.entrySet()) {
+                TCPConnection neighborConnection = entry.getValue();
+                int neighborsCount = overlayTasksCount.get(entry.getKey());
+                System.out.println("Self count vs Neighbors Count vs mean: " + totalCount + " " + neighborsCount + " " + balancedCount);
+                if (Math.abs(totalCount - neighborsCount) < this.BATCH_SIZE) {
+                    startThreadPool();
+                }
+                else  {
+                    if (totalCount > neighborsCount) {
+                        /* push load in batches equal to balance difference */
+                        migrateTasks(balanceDifference, neighborConnection);
+                    } else if (totalCount < neighborsCount) {
+                        /* send pull request for balance difference */
+                        try {
+                            PullRequest message = new PullRequest(balanceDifference);
+                            neighborConnection.getTCPSenderThread().sendData(message.getBytes());
+                        } catch (IOException | InterruptedException e) {
+                            System.out.println("Error occurred while sending pull request: " + e.getMessage());
+                            e.printStackTrace();
+                        }
+                    }
                 }
             }
-
         }
+
+
 
     }
 
@@ -469,7 +478,9 @@ public class ComputeNode implements Node, Protocol {
          * hashmap, then relay forward
          */
 
-        overlayTasksCount.put(nodeDetails, message.getCount());
+        if (!overlayTasksCount.containsKey(nodeDetails)) {
+            overlayTasksCount.putIfAbsent(nodeDetails, message.getCount());
+        }
         for (Map.Entry<String, TCPConnection> entry : connections.entrySet()) {
             TCPConnection neighborConnection = entry.getValue();
 
