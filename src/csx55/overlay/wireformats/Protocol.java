@@ -20,7 +20,7 @@ public interface Protocol {
     final int CHECK_STATUS = 11;
     final int STATUS_RESPONSE = 12;
     final int MIGRATE_TASKS = 13;
-    final int PULL_REQUEST = 14;
+    final int PUSH_REQUEST = 14;
     final int MIGRATE_RESPONSE = 15;
 
     final byte SUCCESS = (byte) 200;
