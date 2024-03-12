@@ -79,12 +79,12 @@ public class ComputeNode implements Node, Protocol {
 
     private TaskStatistics messageStatistics = new TaskStatistics();
 
-    private Map<String, Integer> overlayTasksCount = new ConcurrentHashMap<>();
+    private Map<String, Integer> overlayTasksCount;
 
     private int overlaySize;
 
-    private List<Task> generatedTasks = new ArrayList<>();
-    private List<Task> migratedTasks = new ArrayList<>();
+    private List<Task> generatedTasks;
+    private List<Task> migratedTasks ;
 
     private int balancedCount;
 
@@ -94,7 +94,7 @@ public class ComputeNode implements Node, Protocol {
 
     private final int RANDOM_MAX = 1000;
 
-    private AtomicBoolean ROUND_COMPLETED = new AtomicBoolean(false);
+    private CountDownLatch roundCompleteLatch;
 
     private volatile boolean isMigratingTasks = false;
 
@@ -223,7 +223,7 @@ public class ComputeNode implements Node, Protocol {
      * @param connection The TCP connection associated with the event.
      */
     public void handleIncomingEvent(Event event, TCPConnection connection) {
-        // System.out.println("Received event: " + event.toString());
+         System.out.println("Received event: " + event.toString());
 
         switch (event.getType()) {
             case Protocol.REGISTER_REQUEST:
@@ -345,7 +345,12 @@ public class ComputeNode implements Node, Protocol {
          */
         try {
             for (int round = 1; round < rounds + 1; round++) {
-                this.ROUND_COMPLETED.set(false);
+                this.roundCompleteLatch = new CountDownLatch(1);
+
+                this.generatedTasks = new ArrayList<>();
+                this.migratedTasks = new ArrayList<>();
+                this.overlayTasksCount = new ConcurrentHashMap<>();
+
                 int noOfTasks = random.nextInt(RANDOM_MAX) + 1;
                 for (int i = 1; i < noOfTasks + 1; i++) {
                     Task task = new Task(InetAddress.getLocalHost().getHostAddress(), nodePort, i,
@@ -358,7 +363,6 @@ public class ComputeNode implements Node, Protocol {
 
                 /* now, first send no of tasks generated around the ring */
                 sendTasksCount(noOfTasks);
-                System.out.println("Sent tasks count to peers");
 
                 /* then, wait for all tasks count and perform pair wise load balancing */
                 calculateMean();
@@ -367,16 +371,15 @@ public class ComputeNode implements Node, Protocol {
                 /*
                  * finally, start thread pool and wait for taskS to complete
                  */
-                // TODO: add a latch/semaphore to indicate if ready for execution
-                waitForTasksToComplete();
+                roundCompleteLatch.await();
+//                waitForTasksToComplete();
             }
-
             /*
              * send traffic summary to registry after tasks after all rounds are completed
              */
             // sendTaskCompleteMessage();
 
-        } catch (IOException e) {
+        } catch (IOException | InterruptedException e) {
             System.out.println("Error occurred while adding tasks to queue: " + e.getMessage());
             e.printStackTrace();
         }
@@ -392,7 +395,7 @@ public class ComputeNode implements Node, Protocol {
             }
         }
 
-        int totalTasks = 0;
+        int totalTasks = generatedTasks.size();
         for (int count : overlayTasksCount.values()) {
             totalTasks += count;
         }
@@ -409,8 +412,10 @@ public class ComputeNode implements Node, Protocol {
         int totalCount = generatedTasks.size() + migratedTasks.size();
 
         int balanceDifference = Math.abs(totalCount - this.balancedCount);
-        int tolerance = (int) Math.ceil(0.2 * this.balancedCount);
+        int tolerance = (int) Math.ceil(0.1 * this.balancedCount);
         boolean isBalanced = balanceDifference <= tolerance;
+        System.out.println(generatedTasks.size() + " " + this.balancedCount + " " + isBalanced);
+
         if (!isBalanced) {
             return false;
         } else {
@@ -418,9 +423,11 @@ public class ComputeNode implements Node, Protocol {
             for (Map.Entry<String, Integer> entry : overlayTasksCount.entrySet()) {
                 int neighborsCount = entry.getValue();
                 boolean isNodeBalanced = Math.abs(neighborsCount - this.balancedCount) <= tolerance;
+                System.out.println("Is node balanced: " + isNodeBalanced);
                 if (!isNodeBalanced) {
                     return false;
                 }
+
             }
             return true;
         }
@@ -436,16 +443,6 @@ public class ComputeNode implements Node, Protocol {
          * 
          */
         while (!checkIfBalanced()) {
-            if (isMigratingTasks) {
-                try {
-                    wait();
-
-                } catch (InterruptedException e) {
-                    System.out.println("Error occurred while waiting for migration to complete: " +
-                            e.getMessage());
-                    e.printStackTrace();
-                }
-            }
 
             int totalCount = generatedTasks.size() + migratedTasks.size();
 
@@ -463,25 +460,25 @@ public class ComputeNode implements Node, Protocol {
                     /* means node is high loaded */
                     PushRequest message = new PushRequest(totalCount);
 
-                    if (outgoingHostCount < this.balancedCount) {
+                    if (outgoingHostCount <= this.balancedCount) {
                         /* send a push request */
                         outgoingConnection.getTCPSenderThread().sendData(message.getBytes());
                     }
 
-                    if (incomingHostsCount < this.balancedCount) {
+                    if (incomingHostsCount <= this.balancedCount) {
                         /* send a push request */
-                        outgoingConnection.getTCPSenderThread().sendData(message.getBytes());
+                        incomingConnection.getTCPSenderThread().sendData(message.getBytes());
                     }
                 } else {
                     CheckStatus message = new CheckStatus(Math.abs(generatedTasks.size() - this.balancedCount));
 
                     /* means node is less loaded */
-                    if (outgoingHostCount > this.balancedCount) {
+                    if (outgoingHostCount >= this.balancedCount) {
                         /* send a migration request */
                         outgoingConnection.getTCPSenderThread().sendData(message.getBytes());
                     }
 
-                    if (incomingHostsCount < this.balancedCount) {
+                    if (incomingHostsCount >= this.balancedCount) {
                         /* send a migration request */
                         incomingConnection.getTCPSenderThread().sendData(message.getBytes());
                     }
@@ -495,7 +492,7 @@ public class ComputeNode implements Node, Protocol {
 
             // Wait for a while before checking again
             try {
-                TimeUnit.SECONDS.sleep(1); // Adjust the sleep time as needed (e.g., 1000 milliseconds = 1 second)
+                TimeUnit.MILLISECONDS.sleep(10); // Adjust the sleep time as needed (e.g., 1000 milliseconds = 1 second)
             } catch (InterruptedException e) {
                 System.out.println("Interrupted while waiting: " + e.getMessage());
             }
@@ -508,7 +505,7 @@ public class ComputeNode implements Node, Protocol {
          * if they are then start
          */
 
-        this.READY_TO_EXECUTE.set(true);
+//        this.READY_TO_EXECUTE.set(true);
         startThreadPool();
     }
 
@@ -559,33 +556,33 @@ public class ComputeNode implements Node, Protocol {
 
     private synchronized void handleStatusCheck(CheckStatus message, TCPConnection connection) {
         if (isMigratingTasks) {
-            try {
-                wait();
-
-            } catch (InterruptedException e) {
-                System.out.println("Error occurred while waiting for migration to complete at status check: " +
-                        e.getMessage());
-                e.printStackTrace();
-            }
+            return;
         }
+//        int totalCount = generatedTasks.size() + migratedTasks.size();
 
+//        int balanceDifference = Math.abs(totalCount - this.balancedCount);
+//        int tolerance = (int) Math.ceil(0.1 * this.balancedCount);
+//        boolean isBalanced = balanceDifference <= tolerance;
+//        int targetCount = message.getCount();
+//        replaced balance difference with generatedTasks.size()
+//        if (message.getCount() > generatedTasks.size()) {
+//            targetCount = tolerance;
+//        }
+//
+//        if (!isBalanced && targetCount > 0) {
+//            this.isMigratingTasks = true;
+//            // int targetCount = message.getCount() - (message.getCount() % 10);
+//            migrateTasks(targetCount, connection);
+//        }
         this.isMigratingTasks = true;
         // int targetCount = message.getCount() - (message.getCount() % 10);
-        migrateTasks(message.getCount(), connection);
+        migrateTasks(10, connection);
+
+
     }
 
     private synchronized void handlePushRequest(PushRequest message, TCPConnection connection) {
         /* send back status message */
-        if (isMigratingTasks) {
-            try {
-                wait();
-
-            } catch (InterruptedException e) {
-                System.out.println("Error occurred while waiting for migration to complete at status check: " +
-                        e.getMessage());
-                e.printStackTrace();
-            }
-        }
 
         CheckStatus statusMessage = new CheckStatus(Math.abs(generatedTasks.size() - this.balancedCount));
         try {
@@ -611,12 +608,14 @@ public class ComputeNode implements Node, Protocol {
             connection.getTCPSenderThread().sendData(message.getBytes());
             this.messageStatistics.addPulled(event.getTasksSize());
 
+            this.isMigratingTasks = false;
+
             System.out.println("Received tasks from " + connection.getSocket().toString() + " " + event.getTasksSize());
 
             /* now update your peers about your new count */
             sendTasksCount(generatedTasks.size() + migratedTasks.size());
 
-            this.isMigratingTasks = false;
+
 
         } catch (IOException | InterruptedException e) {
             System.out.println("Error occurred while sending migration response: " +
@@ -635,7 +634,6 @@ public class ComputeNode implements Node, Protocol {
 
     private synchronized void handleMigrateResponse() {
         this.isMigratingTasks = false;
-        notifyAll();
     }
 
     public TaskStatistics getNodeStatistics() {
@@ -672,6 +670,7 @@ public class ComputeNode implements Node, Protocol {
         System.out.println("Ready to start...");
         System.out.println("Generated count: " + generatedTasks.size());
         System.out.println("Migrated tasks: " + migratedTasks.size());
+        System.out.println(messageStatistics.getGenerated());
 
         // waitForTasksToComplete();
     }
