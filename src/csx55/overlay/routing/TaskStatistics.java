@@ -45,8 +45,8 @@ public class TaskStatistics {
         pulledCount.getAndAdd(tasksCount);
     }
 
-    public void addCompleted() {
-        completedCount.getAndIncrement();
+    public void addCompleted(long tasksCount) {
+        completedCount.getAndAdd(tasksCount);
     }
 
     public void addPushed(int tasksCount) {

@@ -24,6 +24,8 @@ public class TrafficSummary implements Event {
     private long pushedCount;
     private long completedCount;
 
+    public float percentCompleted;
+
     /**
      * Constructs a TrafficSummary object with the specified parameters.
      *
@@ -123,12 +125,13 @@ public class TrafficSummary implements Event {
      * @return A string representing the traffic summary.
      */
     public String toString() {
-        return String.format("%1$20s %2$12s %3$10s %4$15s %5$15s %6$10s",
+        return String.format("%1$20s %2$12s %3$10s %4$15s %5$15s  %6$10.2s%%",
                 ipAddress + ":" + Integer.toString(portNumber),
                 Long.toString(generatedCount),
                 Long.toString(pulledCount),
                 Long.toString(pushedCount),
-                Long.toString(completedCount));
+                Long.toString(completedCount),
+                Float.toString(percentCompleted));
     }
 
 }

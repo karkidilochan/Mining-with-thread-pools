@@ -307,6 +307,7 @@ public class ComputeNode implements Node, Protocol {
 
                 /* then, create the thread pool of given size */
                 this.threadPool = new ThreadPool(threadPoolSize, this);
+                this.threadPool.start();
 
             } catch (NumberFormatException | IOException | InterruptedException e) {
                 System.out.println(e.getMessage());
@@ -371,15 +372,16 @@ public class ComputeNode implements Node, Protocol {
                 /*
                  * finally, start thread pool and wait for taskS to complete
                  */
-                roundCompleteLatch.await();
-//                waitForTasksToComplete();
+                startThreadPool();
+
+                waitForTasksToComplete();
             }
             /*
              * send traffic summary to registry after tasks after all rounds are completed
              */
-            // sendTaskCompleteMessage();
+             sendTaskCompleteMessage();
 
-        } catch (IOException | InterruptedException e) {
+        } catch (IOException | InterruptedException  e) {
             System.out.println("Error occurred while adding tasks to queue: " + e.getMessage());
             e.printStackTrace();
         }
@@ -387,14 +389,14 @@ public class ComputeNode implements Node, Protocol {
     }
 
     private void calculateMean() {
-        System.out.println("Waiting to receive count of tasks from all nodes...");
+
 
         while (true) {
             if (overlayTasksCount.size() == overlaySize - 1) {
                 break;
             }
         }
-
+        System.out.println("Received count of tasks from all nodes...");
         int totalTasks = generatedTasks.size();
         for (int count : overlayTasksCount.values()) {
             totalTasks += count;
@@ -423,7 +425,7 @@ public class ComputeNode implements Node, Protocol {
             for (Map.Entry<String, Integer> entry : overlayTasksCount.entrySet()) {
                 int neighborsCount = entry.getValue();
                 boolean isNodeBalanced = Math.abs(neighborsCount - this.balancedCount) <= tolerance;
-                System.out.println("Is node balanced: " + isNodeBalanced);
+                System.out.println(entry.getKey() + "Is node balanced: " + isNodeBalanced + " " + neighborsCount);
                 if (!isNodeBalanced) {
                     return false;
                 }
@@ -492,30 +494,23 @@ public class ComputeNode implements Node, Protocol {
 
             // Wait for a while before checking again
             try {
-                TimeUnit.MILLISECONDS.sleep(10); // Adjust the sleep time as needed (e.g., 1000 milliseconds = 1 second)
+                TimeUnit.MILLISECONDS.sleep(100); // Adjust the sleep time as needed (e.g., 1000 milliseconds = 1 second)
             } catch (InterruptedException e) {
                 System.out.println("Interrupted while waiting: " + e.getMessage());
             }
 
         }
-        /* push tasks to thread queue and start */
-        /*
-         * check if self balanced
-         * then check if your neighbors are balanced
-         * if they are then start
-         */
-
-//        this.READY_TO_EXECUTE.set(true);
-        startThreadPool();
     }
 
-    private void waitForTasksToComplete() {
+    private void waitForTasksToComplete() throws InterruptedException {
         /* check semaphore that is adjusted by the threadpool */
-        while (true) {
-            if (this.ROUND_COMPLETED.get()) {
-                break;
-            }
-        }
+        System.out.println("Starting to wait for tasks to complete");
+
+        roundCompleteLatch.await();
+
+        System.out.println("Tasks Completed");
+
+        messageStatistics.addCompleted(generatedTasks.size() + migratedTasks.size());
     }
 
     public void sendTasksCount(int numberOfTasks) {
@@ -666,33 +661,31 @@ public class ComputeNode implements Node, Protocol {
         threadPool.addTasks(generatedTasks);
         threadPool.addTasks(migratedTasks);
 
-        // this.threadPool.start();
         System.out.println("Ready to start...");
         System.out.println("Generated count: " + generatedTasks.size());
         System.out.println("Migrated tasks: " + migratedTasks.size());
         System.out.println(messageStatistics.getGenerated());
 
-        // waitForTasksToComplete();
     }
 
-    public void notifyRoundComplete() {
-        this.ROUND_COMPLETED.set(true);
-    }
-
-    public boolean getIfRoundComplete() {
-        return this.ROUND_COMPLETED.get();
+    public CountDownLatch getRoundsLatch() {
+        return this.roundCompleteLatch;
     }
 
     public void sendTaskCompleteMessage() {
         TrafficSummary trafficSummary = new TrafficSummary(nodeHost, nodePort, messageStatistics);
 
+        System.out.println(messageStatistics.toString());
+        System.out.println(trafficSummary);
         try {
+            System.out.println("Sending traffic summary to registry....");
             registryConnection.getTCPSenderThread().sendData(trafficSummary.getBytes());
         } catch (IOException | InterruptedException e) {
             System.out.println("Error occurred while sending task summary response: " + e.getMessage());
             e.printStackTrace();
         }
         // Reset all messaging messageStatistics counters
-        messageStatistics.reset();
+//        messageStatistics.reset();
     }
+
 }
