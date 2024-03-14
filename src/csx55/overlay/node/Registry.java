@@ -131,6 +131,10 @@ public class Registry implements Node {
                 handleRegistrationEvent((Register) event, connection, false);
                 break;
 
+            case Protocol.TASK_COMPLETE:
+                handleTaskCompleteEvent();
+                break;
+
             case Protocol.TRAFFIC_SUMMARY:
                 handleTaskSummary((TrafficSummary) event);
                 break;
@@ -270,19 +274,55 @@ public class Registry implements Node {
             return;
         }
 
-        // Create and send task initiation message to all connections
-        TaskInitiate startTask = new TaskInitiate(rounds);
-        connections.forEach((key, value) -> {
+        for (int round= 1; round < rounds + 1; round++) {
+            // Create and send task initiation message to all connections
+            TaskInitiate startTask = new TaskInitiate(round);
+            connections.forEach((key, value) -> {
+                try {
+                    value.getTCPSenderThread().sendData(startTask.getBytes());
+                } catch (IOException | InterruptedException e) {
+                    System.out.println(
+                            "Error occurred while sending task initiation message to connection: " + e.getMessage());
+                    e.printStackTrace();
+
+                }
+            });
+            System.out.println("\n Initiating tasks for round " + round + " ...");
+
+            // Wait for statistics to combine
+            waitForRoundComplete();
+
+        }
+
+        connections.forEach((k, connection) -> {
+            PullTrafficSummary request = new PullTrafficSummary();
             try {
-                value.getTCPSenderThread().sendData(startTask.getBytes());
+                connection.getTCPSenderThread().sendData(request.getBytes());
             } catch (IOException | InterruptedException e) {
                 System.out.println(
-                        "Error occurred while sending task initiation message to connection: " + e.getMessage());
+                        "Error occurred while sending traffic summary request to connection: " + e.getMessage());
                 e.printStackTrace();
-
+                return;
             }
         });
-        System.out.println("\n Tasks will begin soon...");
+
+    }
+
+    private void waitForRoundComplete() {
+        // wait till we get task summary from all nodes
+        while (true) {
+            if (completedTasks.get() == connections.size()) {
+                break;
+            }
+        }
+        completedTasks.set(0);
+
+        try {
+            TimeUnit.MILLISECONDS.sleep(1); // Adjust the sleep time as needed (e.g., 1000 milliseconds = 1 second)
+        } catch (InterruptedException e) {
+            System.out.println("Interrupted while waiting: " + e.getMessage());
+        }
+
     }
 
     /**
@@ -290,29 +330,21 @@ public class Registry implements Node {
      * initiating traffic summary retrieval
      * when all tasks have been completed.
      */
-    private synchronized void handleTaskSummary(TrafficSummary summary) {
-        System.out.println("Received task summary " + summary.toString());
+
+    private synchronized void handleTaskCompleteEvent() {
         completedTasks.getAndIncrement();
+        System.out.println("Received rounds complete event ");
+    }
+
+
+    private synchronized void handleTaskSummary(TrafficSummary summary) {
+        System.out.println("Received traffic summary " + summary.toString());
         trafficSummary.add(summary);
 
-        if (completedTasks.get() == connections.size()) {
-            try {
-                // Sleep for 15 seconds to allow all messages to be received.
-                TimeUnit.SECONDS.sleep(5);
-            } catch (InterruptedException e) {
-                System.out.println("Thread sleep interrupted: " + e.getMessage());
-                e.printStackTrace();
-            }
 
-
-
-            if (trafficSummary.size() == connections.size()) {
-                display(trafficSummary);
-//                trafficSummary.clear();
-            }
-
-            // Finally, reset the completed task count
-//            completedTasks.set(0);
+        if (trafficSummary.size() == connections.size()) {
+            display(trafficSummary);
+            trafficSummary.clear();
         }
     }
 
@@ -358,9 +390,8 @@ public class Registry implements Node {
         }
 
         for (TrafficSummary summary : statisticsSummary) {
-            float percentCompleted = (summary.getCompleted() / totalCompleted) * 100;
-            summary.percentCompleted = percentCompleted;
-            String result = summary.toString() + percentCompleted;
+            summary.percentCompleted = ((double) summary.getCompleted() / totalCompleted) * 100;
+            String result = summary.toString();
             System.out.println(result);
         }
 
