@@ -8,7 +8,6 @@ import java.util.concurrent.CountDownLatch;
 
 import csx55.overlay.node.ComputeNode;
 import csx55.overlay.task.Task;
-import csx55.overlay.task.WorkerTask;
 
 /* A new threadpool is created for each computation node
  * its size is defined during the creation of an overlay
@@ -23,7 +22,7 @@ public class ThreadPool {
 
     private Thread[] threads;
 
-    private CountDownLatch roundStartLatch =  new CountDownLatch(1);;
+    private CountDownLatch roundStartLatch = new CountDownLatch(1);;
 
     // default constructor
     public ThreadPool(int numberOfThreads, ComputeNode messagingNode) {
@@ -80,7 +79,7 @@ public class ThreadPool {
         }
     }
 
-    public CountDownLatch getRoundStartLatch () {
+    public CountDownLatch getRoundStartLatch() {
         return roundStartLatch;
     }
 }

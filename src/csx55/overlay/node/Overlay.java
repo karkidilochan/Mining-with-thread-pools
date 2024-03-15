@@ -1,12 +1,10 @@
 package csx55.overlay.node;
 
-import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
 import csx55.overlay.tcp.TCPConnection;
-// import csx55.overlay.wireformats.LinkWeights;
 import csx55.overlay.wireformats.ComputeNodesList;
 
 /**

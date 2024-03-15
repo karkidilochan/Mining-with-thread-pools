@@ -10,11 +10,9 @@ import java.util.Scanner;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import csx55.overlay.routing.TaskStatistics;
 import csx55.overlay.tcp.TCPConnection;
 import csx55.overlay.tcp.TCPServer;
 import csx55.overlay.wireformats.Event;
-// import csx55.overlay.wireformats.LinkWeights;
 import csx55.overlay.wireformats.Protocol;
 import csx55.overlay.wireformats.PullTrafficSummary;
 import csx55.overlay.wireformats.Register;
@@ -274,7 +272,7 @@ public class Registry implements Node {
             return;
         }
 
-        for (int round= 1; round < rounds + 1; round++) {
+        for (int round = 1; round < rounds + 1; round++) {
             // Create and send task initiation message to all connections
             TaskInitiate startTask = new TaskInitiate(round);
             connections.forEach((key, value) -> {
@@ -333,14 +331,11 @@ public class Registry implements Node {
 
     private synchronized void handleTaskCompleteEvent() {
         completedTasks.getAndIncrement();
-        System.out.println("Received rounds complete event ");
     }
-
 
     private synchronized void handleTaskSummary(TrafficSummary summary) {
         System.out.println("Received traffic summary " + summary.toString());
         trafficSummary.add(summary);
-
 
         if (trafficSummary.size() == connections.size()) {
             display(trafficSummary);
@@ -373,7 +368,7 @@ public class Registry implements Node {
         long totalCompleted = 0;
 
         System.out.println(
-                String.format( "\n%1$20s %2$12s %3$10s %4$15s %5$15s %6$10s",
+                String.format("\n%1$20s %2$12s %3$10s %4$15s %5$15s %6$10s",
                         "",
                         "Generated tasks",
                         "Pulled tasks",
@@ -382,7 +377,7 @@ public class Registry implements Node {
                         "% of tasks performed"));
 
         for (TrafficSummary summary : statisticsSummary) {
-//            System.out.println(summary.toString());
+            // System.out.println(summary.toString());
             totalGenerated += summary.getGenerated();
             totalPulled += summary.getPulled();
             totalPushed += summary.getPushed();
@@ -394,11 +389,6 @@ public class Registry implements Node {
             String result = summary.toString();
             System.out.println(result);
         }
-
-//        System.out.println(String.format("%1$20s %2$40s %3$20s %4$15s %5$15s\n",
-//                "Sum:", Long.toString(totalGenerated),
-//                Long.toString(totalPulled), Long.toString(totalPushed),
-//                Long.toString(totalCompleted), (totalGenerated / totalPerformed) * 100));
 
         System.out.println(String.format("%1$20s %2$10s %3$10s %4$10s %5$10s %6$10.2f%%\n",
                 "Sum:", Long.toString(totalGenerated),

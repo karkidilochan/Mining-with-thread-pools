@@ -2,7 +2,6 @@ package csx55.overlay.node;
 
 import java.util.ArrayList;
 import java.util.HashSet;
-import java.util.List;
 
 import csx55.overlay.tcp.TCPConnection;
 
@@ -35,4 +34,3 @@ public class OverlayNode {
     }
 
 }
-
