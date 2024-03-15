@@ -131,6 +131,10 @@ public class Registry implements Node {
                 handleRegistrationEvent((Register) event, connection, false);
                 break;
 
+            case Protocol.TASK_COMPLETE:
+                handleTaskCompleteEvent();
+                break;
+
             case Protocol.TRAFFIC_SUMMARY:
                 handleTaskSummary((TrafficSummary) event);
                 break;
@@ -270,19 +274,55 @@ public class Registry implements Node {
             return;
         }
 
-        // Create and send task initiation message to all connections
-        TaskInitiate startTask = new TaskInitiate(rounds);
-        connections.forEach((key, value) -> {
+        for (int round= 1; round < rounds + 1; round++) {
+            // Create and send task initiation message to all connections
+            TaskInitiate startTask = new TaskInitiate(round);
+            connections.forEach((key, value) -> {
+                try {
+                    value.getTCPSenderThread().sendData(startTask.getBytes());
+                } catch (IOException | InterruptedException e) {
+                    System.out.println(
+                            "Error occurred while sending task initiation message to connection: " + e.getMessage());
+                    e.printStackTrace();
+
+                }
+            });
+            System.out.println("\n Initiating tasks for round " + round + " ...");
+
+            // Wait for statistics to combine
+            waitForRoundComplete();
+
+        }
+
+        connections.forEach((k, connection) -> {
+            PullTrafficSummary request = new PullTrafficSummary();
             try {
-                value.getTCPSenderThread().sendData(startTask.getBytes());
+                connection.getTCPSenderThread().sendData(request.getBytes());
             } catch (IOException | InterruptedException e) {
                 System.out.println(
-                        "Error occurred while sending task initiation message to connection: " + e.getMessage());
+                        "Error occurred while sending traffic summary request to connection: " + e.getMessage());
                 e.printStackTrace();
-
+                return;
             }
         });
-        System.out.println("\n Tasks will begin soon...");
+
+    }
+
+    private void waitForRoundComplete() {
+        // wait till we get task summary from all nodes
+        while (true) {
+            if (completedTasks.get() == connections.size()) {
+                break;
+            }
+        }
+        completedTasks.set(0);
+
+        try {
+            TimeUnit.MILLISECONDS.sleep(1); // Adjust the sleep time as needed (e.g., 1000 milliseconds = 1 second)
+        } catch (InterruptedException e) {
+            System.out.println("Interrupted while waiting: " + e.getMessage());
+        }
+
     }
 
     /**
@@ -290,26 +330,21 @@ public class Registry implements Node {
      * initiating traffic summary retrieval
      * when all tasks have been completed.
      */
-    private synchronized void handleTaskSummary(TrafficSummary summary) {
+
+    private synchronized void handleTaskCompleteEvent() {
         completedTasks.getAndIncrement();
+        System.out.println("Received rounds complete event ");
+    }
 
-        if (completedTasks.get() == connections.size()) {
-            try {
-                // Sleep for 15 seconds to allow all messages to be received.
-                TimeUnit.SECONDS.sleep(15);
-            } catch (InterruptedException e) {
-                System.out.println("Thread sleep interrupted: " + e.getMessage());
-                e.printStackTrace();
-            }
-            trafficSummary.add(summary);
 
-            if (trafficSummary.size() == connections.size()) {
-                display(trafficSummary);
-                trafficSummary.clear();
-            }
+    private synchronized void handleTaskSummary(TrafficSummary summary) {
+        System.out.println("Received traffic summary " + summary.toString());
+        trafficSummary.add(summary);
 
-            // Finally, reset the completed task count
-            completedTasks.set(0);
+
+        if (trafficSummary.size() == connections.size()) {
+            display(trafficSummary);
+            trafficSummary.clear();
         }
     }
 
@@ -338,33 +373,36 @@ public class Registry implements Node {
         long totalCompleted = 0;
 
         System.out.println(
-                String.format("\n%1$20s %2$1s %3$1s %4$5s %5$5s %6$5s",
+                String.format( "\n%1$20s %2$12s %3$10s %4$15s %5$15s %6$10s",
                         "",
-                        "No. of generated tasks",
-                        "No. of pulled tasks",
-                        "No. of pushed tasks",
-                        "No. of completed tasks",
-                        "% of total tasks performed"));
+                        "Generated tasks",
+                        "Pulled tasks",
+                        "Pushed tasks",
+                        "Completed tasks",
+                        "% of tasks performed"));
 
         for (TrafficSummary summary : statisticsSummary) {
-            System.out.println(summary.toString());
+//            System.out.println(summary.toString());
             totalGenerated += summary.getGenerated();
             totalPulled += summary.getPulled();
             totalPushed += summary.getPushed();
             totalCompleted += summary.getCompleted();
         }
 
-        long totalPerformed = totalCompleted + totalGenerated + totalPulled + totalPushed;
-
         for (TrafficSummary summary : statisticsSummary) {
-            float percentCompleted = (totalCompleted / totalPerformed) * 100;
-            String result = summary.toString() + percentCompleted;
+            summary.percentCompleted = ((double) summary.getCompleted() / totalCompleted) * 100;
+            String result = summary.toString();
             System.out.println(result);
         }
 
-        System.out.println(String.format("%1$20s %2$40s %3$20s %4$15s %5$15s\n",
+//        System.out.println(String.format("%1$20s %2$40s %3$20s %4$15s %5$15s\n",
+//                "Sum:", Long.toString(totalGenerated),
+//                Long.toString(totalPulled), Long.toString(totalPushed),
+//                Long.toString(totalCompleted), (totalGenerated / totalPerformed) * 100));
+
+        System.out.println(String.format("%1$20s %2$10s %3$10s %4$10s %5$10s %6$10.2f%%\n",
                 "Sum:", Long.toString(totalGenerated),
                 Long.toString(totalPulled), Long.toString(totalPushed),
-                Long.toString(totalCompleted), (totalGenerated / totalPerformed) * 100));
+                Long.toString(totalCompleted), ((double) totalCompleted / totalGenerated) * 100));
     }
 }

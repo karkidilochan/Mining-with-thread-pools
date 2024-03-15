@@ -1,6 +1,7 @@
 package csx55.overlay.threads;
 
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import csx55.overlay.node.ComputeNode;
 import csx55.overlay.task.Miner;
@@ -17,10 +18,13 @@ public class TaskThreadRunnable implements Runnable {
 
     private ComputeNode clientNode;
 
+//    private ThreadPool threadPool;
+
     // default constructor will take the blocking queue it takes tasks from
     public TaskThreadRunnable(BlockingQueue<Task> taskQueue, ComputeNode clientNode) {
         this.taskQueue = taskQueue;
         this.clientNode = clientNode;
+//        this.threadPool = threadPool;
     }
 
     public void run() {
@@ -36,6 +40,7 @@ public class TaskThreadRunnable implements Runnable {
              */
             try {
 
+
                 /* in final version, this will take the mine instance */
                 Task task = taskQueue.take();
                 /* call mine function of miner here */
@@ -43,9 +48,11 @@ public class TaskThreadRunnable implements Runnable {
                 miner.startMiner(task);
 
                 /* increase count for completed tasks */
-                clientNode.getNodeStatistics().addCompleted();
+//                clientNode.incrementComplete();
 
-                checkIfEmpty();
+                if (taskQueue.isEmpty()) {
+                    checkOnLatch();
+                }
 
             } catch (Exception e) {
                 System.out.println("Error mining task:" + e.getMessage());
@@ -55,14 +62,10 @@ public class TaskThreadRunnable implements Runnable {
 
     }
 
-    private synchronized void checkIfEmpty() {
-        boolean roundCompleted = clientNode.getIfRoundComplete();
-        if (!roundCompleted) {
-            if (taskQueue.size() == 0) {
-                roundCompleted = true;
-                clientNode.notifyRoundComplete();
-            }
+    private synchronized void checkOnLatch() {
+        if (this.clientNode.getRoundsLatch().getCount() > 0) {
+            System.out.println("Checked by: {}" + this.thread);
+            this.clientNode.getRoundsLatch().countDown();
         }
-
     }
 }

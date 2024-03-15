@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.ArrayBlockingQueue;
 import java.util.concurrent.BlockingQueue;
+import java.util.concurrent.CountDownLatch;
 
 import csx55.overlay.node.ComputeNode;
 import csx55.overlay.task.Task;
@@ -21,6 +22,8 @@ public class ThreadPool {
     private ArrayList<TaskThreadRunnable> runnableTasks = new ArrayList<>();
 
     private Thread[] threads;
+
+    private CountDownLatch roundStartLatch =  new CountDownLatch(1);;
 
     // default constructor
     public ThreadPool(int numberOfThreads, ComputeNode messagingNode) {
@@ -75,5 +78,9 @@ public class ThreadPool {
                 e.printStackTrace();
             }
         }
+    }
+
+    public CountDownLatch getRoundStartLatch () {
+        return roundStartLatch;
     }
 }

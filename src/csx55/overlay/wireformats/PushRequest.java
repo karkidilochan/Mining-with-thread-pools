@@ -12,7 +12,7 @@ import java.io.IOException;
  * Represents a message indicating the initiation of a task
  * with a specified number of rounds.
  */
-public class PullRequest implements Event {
+public class PushRequest implements Event {
 
     int type;
     int numberOfTasks;
@@ -22,8 +22,8 @@ public class PullRequest implements Event {
      * 
      * @param numberOfRounds The number of rounds for the task.
      */
-    public PullRequest(int numberOfTasks) {
-        this.type = Protocol.PULL_REQUEST;
+    public PushRequest(int numberOfTasks) {
+        this.type = Protocol.PUSH_REQUEST;
         this.numberOfTasks = numberOfTasks;
     }
 
@@ -32,7 +32,7 @@ public class PullRequest implements Event {
      * 
      * @param marshalledData The marshalled byte array containing the data.
      */
-    public PullRequest(byte[] marshalledData) throws IOException {
+    public PushRequest(byte[] marshalledData) throws IOException {
         ByteArrayInputStream inputData = new ByteArrayInputStream(marshalledData);
         DataInputStream din = new DataInputStream(new BufferedInputStream(inputData));
 

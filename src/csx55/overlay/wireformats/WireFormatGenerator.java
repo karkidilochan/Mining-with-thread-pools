@@ -69,8 +69,8 @@ public class WireFormatGenerator {
             case Protocol.MIGRATE_TASKS:
                 return new MigrateTasks(marshalledData);
 
-            case Protocol.PULL_REQUEST:
-                return new PullRequest(marshalledData);
+            case Protocol.PUSH_REQUEST:
+                return new PushRequest(marshalledData);
 
             case Protocol.MIGRATE_RESPONSE:
                 return new MigrateResponse(marshalledData);
