@@ -22,4 +22,4 @@ gradle clean
 gradle build
 
 # Launch the Registry process in a new terminal window via SSH
-gnome-terminal -- bash -c "ssh -t $HOST 'cd $BUILD_DIR; java -cp . csx55.overlay.node.Registry $PORT; bash;'"
+gnome-terminal -- bash -c "ssh -t $HOST 'cd $BUILD_DIR; java -cp . distributed.overlay.node.Registry $PORT; bash;'"

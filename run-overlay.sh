@@ -24,14 +24,14 @@ gradle build
 
 # Launch Registry
 echo "Launching Registry on $HOST..."
-ssh -t "$HOST" "cd '$DIR' && java -cp '$JAR_PATH' csx55.overlay.node.Registry $PORT &"
+ssh -t "$HOST" "cd '$DIR' && java -cp '$JAR_PATH' distributed.overlay.node.Registry $PORT &"
 
 # Sleep for 1 second to ensure Registry is up
 sleep 1
 
 # Launch Messaging Nodes
 echo "Launching Messaging Nodes on machines from $MACHINE_LIST..."
-SCRIPT="java -cp '$JAR_PATH' csx55.overlay.node.MessagingNode $HOST $PORT"
+SCRIPT="java -cp '$JAR_PATH' distributed.overlay.node.MessagingNode $HOST $PORT"
 
 while IFS= read -r machine; do
    echo "Launching Messaging Node on $machine..."

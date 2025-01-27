@@ -13,11 +13,11 @@ PORT=5001
 gradle clean
 gradle build
 
-gnome-terminal -- bash -c "ssh -t $HOST 'cd $BUILD_DIR; java -cp . csx55.overlay.node.Registry $PORT; bash;'"
+gnome-terminal -- bash -c "ssh -t $HOST 'cd $BUILD_DIR; java -cp . distributed.overlay.node.Registry $PORT; bash;'"
 
 sleep 1
 
-COMMAND="cd $BUILD_DIR; java -cp . csx55.overlay.node.ComputeNode $HOST $PORT"
+COMMAND="cd $BUILD_DIR; java -cp . distributed.overlay.node.ComputeNode $HOST $PORT"
 
 for ((j=0; j<${1:-1}; j++))
 do

@@ -20,7 +20,7 @@ if [ -z "$HOST" ] || [ -z "$PORT" ]; then
 fi
 
 # Launch Messaging Nodes
-SCRIPT="cd $BUILD; java -cp . csx55.overlay.node.MessagingNode $HOST $PORT"
+SCRIPT="cd $BUILD; java -cp . distributed.overlay.node.MessagingNode $HOST $PORT"
 
 for ((j=0; j<${1:-1}; j++))
 do
